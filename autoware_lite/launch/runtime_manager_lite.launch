@@ -1,0 +1,4 @@
+<launch>
+    <node name="runtime_manager_lite" pkg="autoware_lite" type="runtime_manager_lite.py" output="screen"/>
+
+</launch>
