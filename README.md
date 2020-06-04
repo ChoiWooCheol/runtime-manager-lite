@@ -12,10 +12,10 @@ $ rosrun autoware_lite runtime_manager_lite.py
 
 # Result
 1. GUI (nodes)
-<img src="autoware_lite/img/nodes.png" width="100%" height="100%">
+<img src="autoware_lite/img/nodes.png" width="60%" height="60%">
 
 2. GUI (param & alive check)
-<img src="autoware_lite/img/alive check.png" width="100%" height="100%">
+<img src="autoware_lite/img/alive check.png" width="60%" height="60%">
 
 1. GUI (resource check)
-<img src="autoware_lite/img/resoucre check.png" width="100%" height="100%">
+<img src="autoware_lite/img/resoucre check.png" width="60%" height="60%">
