@@ -115,6 +115,7 @@ class MyWindow(Gtk.ApplicationWindow):
         view2.append_column(column_in_out2)
         renderer_in_out2.connect("toggled", self.on_toggled2)
         
+        
         # Resource Check Frame
         resource_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         cpu_frame = Gtk.Frame()
@@ -177,12 +178,14 @@ class MyWindow(Gtk.ApplicationWindow):
         
         # parametor stack setting
         parameter_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        self.alive_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self.alive_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.param_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         #self.param_Lchildbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         #self.param_Rchildbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        self.alive_label = Gtk.Label('alive label')
+        
+        self.alive_label = Gtk.Label('Select Component')
         self.alive_box.pack_start(self.alive_label, True, True, 0)
+        #self.alive_box.pack_start(button, True, True, 0)
 
         self.param_Lframe = Gtk.Frame()
         self.param_Rframe = Gtk.Frame()
@@ -203,7 +206,38 @@ class MyWindow(Gtk.ApplicationWindow):
         self.param_Rwin.set_border_width(2)
         self.param_Rwin.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
 
-        self.param_Lframe.add(self.alive_box)
+        #self.param_Lframe.add(self.alive_box)
+
+        self.grid = Gtk.Grid()
+        self.grid.set_column_homogeneous(True)
+        self.grid.set_row_homogeneous(True)
+        self.param_Lframe.add(self.grid)
+        self.grid.attach(self.alive_box, 0, 0, 1, 13)
+
+
+        component_store = Gtk.ListStore(int, str)
+        component_store.append([0, "Detection"])
+        component_store.append([1, "Follower"])
+        component_store.append([2, "Localizer"])
+        component_store.append([3, "Decision Maker"])
+        component_store.append([4, "LaneChange Manager"])
+        component_store.append([5, "Local Planner"])
+        component_store.append([6, "Vehicle Setting"])
+        component_store.append([7, "Map"])
+        component_store.append([8, "Sensing"])
+        component_store.append([9, "Point Downsampler"])
+        component_store.append([10, "Show All"])
+        
+        self.alive_view_idx = len(component_store) - 1
+
+        component_combo = Gtk.ComboBox.new_with_model_and_entry(component_store)
+        component_combo.connect("changed", self.on_component_combo_changed)
+        component_combo.set_entry_text_column(1)
+
+        self.grid.attach_next_to(
+            component_combo, self.alive_box, Gtk.PositionType.BOTTOM, 1, 1
+        )
+        
         self.param_Lwin.add(self.param_Lframe)
         self.param_Rwin.add(self.param_Rframe)
 
@@ -223,10 +257,6 @@ class MyWindow(Gtk.ApplicationWindow):
         disk_thread = threading.Thread(target=self.get_disk_space, args=(self.disk_box,))
         disk_thread.daemon = True
         disk_thread.start()
-
-        alive_thread = threading.Thread(target=self.setAliveNodesState)
-        alive_thread.daemon = True
-        alive_thread.start()
 
         stack = Gtk.Stack()
         stack.add_titled(autoware_box, 'child1', 'Autoware Nodes')  
@@ -249,6 +279,82 @@ class MyWindow(Gtk.ApplicationWindow):
         #    self.mem_box.pack_start(Gtk.Label(txt), True, True, 0)
         # add the treeview to the window
         # self.add(view)
+
+    def on_component_combo_changed(self, combo):
+        tree_iter = combo.get_active_iter()
+        if tree_iter is not None:
+            model = combo.get_model()
+            row_id, name = model[tree_iter][:2]
+            #print("Selected: ID=%d, name=%s" % (row_id, name))
+            self.alive_view_idx = row_id
+
+            detect_txt = 'Detection : \n' \
+                            + '     LiDAR detector ---------------> ' + 'True' + '\n'\
+                            + '     camera detector -------------> ' + 'True' + '\n'\
+                            + '     lidar_kf_contour_track --> ' + 'True' + '\n'\
+                            + '     lidar camera fusion --------> ' + 'True' + '\n\n' 
+            follower_txt = 'Follower : \n' \
+                            + '     twist filter ---------------> ' + 'True' + '\n'\
+                            + '     pure pursuit ------------> ' + 'True' + '\n'\
+                            + '     mpc --------------------------> ' + 'True' + '\n'\
+                            + '     hybride stenly ---------> ' + 'True' + '\n\n'
+            localizer_txt = 'Localizer : \n' \
+                            + '     ndt matching --------> ' + 'True' + '\n'\
+                            + '     ekf localizer -----------> ' + 'True' + '\n\n'
+            decision_txt = 'Decision Maker : \n'\
+                            + '     decision maker --------->' + 'Ture' + '\n\n'
+            lanechange_txt = 'LaneChange Manager : \n' \
+                            + '     lanechange manager ------> ' + 'True' + '\n\n'
+            local_plan_txt = 'Local Planner : \n' \
+                            + '     op_common_params ---------> ' + 'True' + '\n'\
+                            + '     op_trajectory_generator --> ' + 'True' + '\n'\
+                            + '     op_motion_predictor --------> ' + 'True' + '\n'\
+                            + '     op_trajectory_evaluator ---> ' + 'True' + '\n'\
+                            + '     op_behavior_selector -------> ' + 'True' + '\n\n'
+            vehicle_txt = 'Vehicle Setting : \n' \
+                            + '     vel_pose_connect --------> ' + 'True' + '\n'\
+                            + '     baselink to localizer -----> ' + 'True' + '\n\n'
+            map_txt = 'Map : \n' \
+                            + '     point cloud -------------> ' + 'True' + '\n'\
+                            + '     vector map -------------> ' + 'True' + '\n'\
+                            + '     point_vector tf -------> ' + 'True' + '\n\n'
+            sensing_txt = 'Sensing : \n'\
+                            + '     sensor1 -------> ' + 'True' + '\n'\
+                            + '     sensor2 -------> ' + 'True' + '\n'\
+                            + '     sensor3 -------> ' + 'True' + '\n'\
+                            + '     sensor4 -------> ' + 'True' + '\n\n'
+            downsampler_txt = 'Point Downsampler : \n'\
+                            + '     voxel grid filter -----> ' + 'True' + '\n\n'
+
+            if self.alive_view_idx == 0:
+                txt = detect_txt
+            elif self.alive_view_idx == 1:
+                txt = follower_txt
+            elif self.alive_view_idx == 2:
+                txt = localizer_txt
+            elif self.alive_view_idx == 3:
+                txt = decision_txt
+            elif self.alive_view_idx == 4:
+                txt = lanechange_txt
+            elif self.alive_view_idx == 5:
+                txt = local_plan_txt
+            elif self.alive_view_idx == 6:
+                txt = vehicle_txt
+            elif self.alive_view_idx == 7:
+                txt = map_txt
+            elif self.alive_view_idx == 8:
+                txt = sensing_txt
+            elif self.alive_view_idx == 9:
+                txt = downsampler_txt
+            elif self.alive_view_idx == 10:
+                txt = detect_txt + follower_txt + localizer_txt + decision_txt + \
+                      lanechange_txt + local_plan_txt + vehicle_txt + map_txt + sensing_txt + downsampler_txt
+
+            self.alive_label.set_text(txt)
+        else:
+            entry = combo.get_child()
+            print("Entered: %s" % entry.get_text())
+
     def on_timeout(self, user_data):
         """
         Update value on the progress bar
@@ -325,38 +431,6 @@ class MyWindow(Gtk.ApplicationWindow):
                     break
 
             self.mem_label.set_text(txt)
-            time.sleep(1)
-
-    def setAliveNodesState(self):
-        seq = 0
-        while 1:
-            detect_txt = 'Detection : \n' \
-                            + '     LiDAR detector ---------------> ' + 'True' + '\n'\
-                            + '     camera detector -------------> ' + 'True' + '\n'\
-                            + '     lidar_kf_contour_track --> ' + 'True' + '\n'\
-                            + '     lidar camera fusion --------> ' + 'True' + '\n' 
-            follower_txt = 'Follower : \n' \
-                            + '     twist filter ---------------> ' + 'True' + '\n'\
-                            + '     pure pursuit ------------> ' + 'True' + '\n'\
-                            + '     mpc --------------------------> ' + 'True' + '\n'\
-                            + '     hybride stenly ---------> ' + 'True' + '\n'
-            localizer_txt = 'Localizer : \n' \
-                            + '     ndt matching --------> ' + 'True' + '\n'\
-                            + '     ekf localizer -----------> ' + 'True' + '\n'
-            lanechange_txt = 'LaneChange Manager : \n' \
-                            + '     lanechange manager ------> ' + 'True' + '\n'
-            local_plan_txt = 'Local Planner : \n' \
-                            + '     op_common_params ---------> ' + 'True' + '\n'\
-                            + '     op_trajectory_generator --> ' + 'True' + '\n'\
-                            + '     op_motion_predictor --------> ' + 'True' + '\n'\
-                            + '     op_trajectory_evaluator ---> ' + 'True' + '\n'\
-                            + '     op_behavior_selector -------> ' + 'True' + '\n'
-            vehicle_txt = 'Vehicle Setting : \n' \
-                            + '     vel_pose_connect --------> ' + 'True' + '\n'\
-                            + '     baselink to localizer -----> ' + 'True' + '\n'
-            
-            txt = detect_txt + follower_txt + localizer_txt + lanechange_txt + local_plan_txt + vehicle_txt
-            self.alive_label.set_text(txt)
             time.sleep(1)
 
     def get_disk_space(self, widget):
