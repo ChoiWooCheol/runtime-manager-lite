@@ -37,6 +37,7 @@ instruction2 = [["rosrun map_file points_map_loader", "rosrun map_file vector_ma
                 ["roslaunch sensor_pkg sensor1.launch", "roslaunch sensor_pkg sensor2.launch", "roslaunch sensor_pkg sensor3.launch", "roslaunch sensor_pkg sensor4.launch"],
                 ["roslaunch points_downsampler points_downsample.launch"]]
 
+
 class MyWindow(Gtk.ApplicationWindow):
 
     def __init__(self, app):
@@ -62,7 +63,7 @@ class MyWindow(Gtk.ApplicationWindow):
             while j < len(nodes[i]):
                 self.store.append(piter, nodes[i][j])
                 j += 1
-
+                 
         self.store2 =  Gtk.TreeStore(str, bool)
         for i in range(len(map_nodes)):
             piter2 = self.store2.append(None, [map_nodes[i][0], False])
@@ -280,6 +281,7 @@ class MyWindow(Gtk.ApplicationWindow):
         # add the treeview to the window
         # self.add(view)
 
+
     def on_component_combo_changed(self, combo):
         tree_iter = combo.get_active_iter()
         if tree_iter is not None:
@@ -472,7 +474,8 @@ class MyWindow(Gtk.ApplicationWindow):
             idx1 = int(path_idx[0])
             idx2 = int(path_idx[1])
             if current_value == True:
-                print(instruction[idx1][idx2])
+                #print(instruction[idx1][idx2])
+                self.get_param_setting_win(idx1,idx2)
             else :
                 print(instruction[idx1][idx2] + ' set false')
 
@@ -504,6 +507,84 @@ class MyWindow(Gtk.ApplicationWindow):
                 citer = self.store.iter_next(citer)
             # if they do, the author as well is selected; otherwise it is not
             self.store[piter][1] = all_selected
+    
+    def get_param_setting_win(self, idx1, idx2):
+        setparam_win = Gtk.Window()
+        setparam_win.set_title("set params")
+        setparam_win.set_default_size(300, 400)
+        setparam_win.set_border_width(20)
+        grid = Gtk.Grid()
+        grid.set_column_homogeneous(True)
+        grid.set_row_homogeneous(True)
+        
+        #debug_label = Gtk.Label(str(idx1) + str(idx2))
+        setparam_win.add(grid)
+
+        set_param_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        grid.attach(set_param_box, 0, 0, 5, 10)
+
+        in_grid = Gtk.Grid()
+        in_grid.set_column_homogeneous(True)
+        in_grid.set_row_homogeneous(True)
+        exec_button = Gtk.Button.new_with_label("Execute")
+        
+        grid.attach_next_to(
+            exec_button, set_param_box, Gtk.PositionType.BOTTOM, 1, 1
+        )
+        set_param_box.pack_start(in_grid, True, True, 0)
+
+        if idx1 == 0: # Detection
+            if idx2 == 0: # lidar detector
+                param1 = Gtk.Label('detect_range (25, 50)')
+                param2 = Gtk.Label('segmentation rate')
+                #param3 = Gtk.Label('12345678')
+
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+
+                param_val1.set_text('25')
+                param_val2.set_text('100')
+                #param_val3.set_text('222')
+                
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                #in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                #in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)
+#            elif idx2 == 1: # camera detector
+#            elif idx2 == 2: # lidar kf contour track
+#            elif idx2 == 3: # lidar camera fusion
+#        elif idx1 == 1: # Follower
+#            if idx2 == 0: # twist filter
+#            elif idx2 == 1: # pure pursuit
+#            elif idx2 == 2: # mpc
+#            elif idx2 == 3: # hybride stenly
+#        elif idx1 == 2: # Localizer
+#            if idx2 == 0: # ndt matching
+#            elif idx2 == 1: # ekf localizer
+#        elif idx1 == 3: # Decision Maker
+#            if idx2 == 0: # decision maker
+#        elif idx1 == 4: # LaneChange Manager
+#            if idx2 == 0: # lanechange manager
+#        elif idx1 == 5: : # Local Planner
+#            if idx2 == 0: # op commom params
+#            elif idx2 == 1: # op trajectory generator
+#            elif idx2 == 2: # op motion predictor
+#            elif idx2 == 3: # op trajectory evaluator
+#            elif idx2 == 4: # op behavior selector
+#        elif idx1 == 6: # Vehicle Setting
+#            if idx2 == 0: # vel pose connect
+#            elif idx2 == 1: # baselink to localizer
+
+
+        setparam_win.show_all()
+        # 체크 눌리면 파라미터 세팅하는 창 만들기 고민 하다가 집갔음.
+        # 함수에서 명령어를 실행할건지 아니면 체크박스가 눌리면 불리는 콜백함수에서 실행할건지 고민 <- 리턴값이 애매해서 힘들듯
+        #exec_button.connect("clicked", self.on_click_me_clicked)
+        
+
 
     def on_toggled2(self, widget, path):
         current_value = self.store2[path][1]
