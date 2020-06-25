@@ -1024,14 +1024,139 @@ class MyWindow(Gtk.ApplicationWindow):
                 in_grid.attach_next_to(param_val17, param_val16, Gtk.PositionType.BOTTOM, 1, 1)
                 in_grid.attach_next_to(param_val18, param_val17, Gtk.PositionType.BOTTOM, 1, 1)
                 in_grid.attach_next_to(param_val19, param_val18, Gtk.PositionType.BOTTOM, 1, 1)
-#            elif idx2 == 1: # op trajectory generator
-#            elif idx2 == 2: # op motion predictor
-#            elif idx2 == 3: # op trajectory evaluator
-#            elif idx2 == 4: # op behavior selector
-#        elif idx1 == 6: # Vehicle Setting
-#            if idx2 == 0: # vel pose connect
-#            elif idx2 == 1: # baselink to localizer
+            elif idx2 == 1: # op trajectory generator
+                param1 = Gtk.Label('samplingTipMargin (0.1 ~ 10.0)')
+                param2 = Gtk.Label('samplingOutMargin (0.2 ~ 40.0)')
 
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+
+                param_val1.set_text('10') # samplingTipMargin
+                param_val2.set_text('15') # samplingOutMargin
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+            elif idx2 == 2: # op motion predictor
+                # launch params
+                param1 = Gtk.Label('enableCurbObstacles')
+                param2 = Gtk.Label('enableGenrateBranches')
+                param3 = Gtk.Label('max_distance_to_lane (0.0 ~ 10.0)')
+                param4 = Gtk.Label('prediction_distance (1.0 ~ 75.0)')
+                param5 = Gtk.Label('enableStepByStepSignal')
+                param6 = Gtk.Label('enableParticleFilterPrediction')
+
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+                param_val4 = Gtk.Entry()
+                param_val5 = Gtk.Entry()
+                param_val6 = Gtk.Entry()
+
+                #default values
+                param_val1.set_text('True') # enableCurbObstacles
+                param_val2.set_text('False') # enableGenrateBranches
+                param_val3.set_text('2') # max_distance_to_lane
+                param_val4.set_text('25') # prediction_distance
+                param_val5.set_text('False') # enableStepByStepSignal
+                param_val6.set_text('False') # enableParticleFilterPrediction
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param4, param3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param5, param4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param6, param5, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(param_val4, param_val3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val5, param_val4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val6, param_val5, Gtk.PositionType.BOTTOM, 1, 1)
+            elif idx2 == 3: # op trajectory evaluator
+                param1 = Gtk.Label('enablePrediction')
+                param_val1 = Gtk.Entry()
+                param_val1.set_text('True') # enablePrediction
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+#            elif idx2 == 4: # op behavior selector
+        elif idx1 == 6: # Vehicle Setting
+            if idx2 == 0: # vel pose connect
+                # launch params
+                param1 = Gtk.Label('topic_pose_stamped')
+                param2 = Gtk.Label('topic_twist_stamped')
+                param3 = Gtk.Label('sim_mode')
+
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+
+                param_val1.set_text('/ndt_pose') # samplingTipMargin
+                param_val2.set_text('/estimate_twist') # samplingOutMargin
+                param_val3.set_text('True') # max_distance_to_lane
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)
+            elif idx2 == 1: # baselink to localizer
+                # launch params
+                param1 = Gtk.Label('x')
+                param2 = Gtk.Label('y')
+                param3 = Gtk.Label('z')
+                param4 = Gtk.Label('yaw')
+                param5 = Gtk.Label('pitch')
+                param6 = Gtk.Label('roll')
+                param7 = Gtk.Label('frame_id')
+                param8 = Gtk.Label('child_frame_id')
+                param9 = Gtk.Label('period_in_ms')
+
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+                param_val4 = Gtk.Entry()
+                param_val5 = Gtk.Entry()
+                param_val6 = Gtk.Entry()
+                param_val7 = Gtk.Entry()
+                param_val8 = Gtk.Entry()
+                param_val9 = Gtk.Entry()
+
+                #default values
+                param_val1.set_text('1.2') # x
+                param_val2.set_text('0') # y
+                param_val3.set_text('2') # z
+                param_val4.set_text('0') # yaw
+                param_val5.set_text('0') # pitch
+                param_val6.set_text('0') # roll
+                param_val7.set_text('/base_link') # frame_id
+                param_val8.set_text('/velodyne') # child_frame_id
+                param_val9.set_text('10') # period_in_ms
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param4, param3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param5, param4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param6, param5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param7, param6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param8, param7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param9, param8, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(param_val4, param_val3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val5, param_val4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val6, param_val5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val7, param_val6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val8, param_val7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val9, param_val8, Gtk.PositionType.BOTTOM, 1, 1)
 
         setparam_win.show_all()
         # 체크 눌리면 파라미터 세팅하는 창 만들기 고민 하다가 집갔음.
