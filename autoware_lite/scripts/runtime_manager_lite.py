@@ -537,39 +537,493 @@ class MyWindow(Gtk.ApplicationWindow):
             if idx2 == 0: # lidar detector
                 param1 = Gtk.Label('detect_range (25, 50)')
                 param2 = Gtk.Label('segmentation rate')
-                #param3 = Gtk.Label('12345678')
+                param3 = Gtk.Label('12345678')
 
                 param_val1 = Gtk.Entry()
                 param_val2 = Gtk.Entry()
                 param_val3 = Gtk.Entry()
 
+                #default values
                 param_val1.set_text('25')
                 param_val2.set_text('100')
-                #param_val3.set_text('222')
+                param_val3.set_text('222')
                 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
                 in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
-                #in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
-                #in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)
 #            elif idx2 == 1: # camera detector
 #            elif idx2 == 2: # lidar kf contour track
 #            elif idx2 == 3: # lidar camera fusion
-#        elif idx1 == 1: # Follower
-#            if idx2 == 0: # twist filter
-#            elif idx2 == 1: # pure pursuit
-#            elif idx2 == 2: # mpc
+        elif idx1 == 1: # Follower
+            if idx2 == 0: # twist filter /config/twist_filter
+                param1 = Gtk.Label('lateral_accel_limit (0.0 ~ 5.0)')
+                param2 = Gtk.Label('lowpass_gain_linear_x (0.0 ~ 1.0)')
+                param3 = Gtk.Label('lowapss_gain_angular_z (0.0 ~ 1.0)')
+
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+
+                #default values
+                param_val1.set_text('0.8')
+                param_val2.set_text('0')
+                param_val3.set_text('0')
+                
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)
+            elif idx2 == 1: # pure pursuit /config/waypoint_follwer
+                param1 = Gtk.Label('Waypoint : 0, Dialog : 1')
+                param2 = Gtk.Label('velocity (0.0 ~ 60.0)')
+                param3 = Gtk.Label('lookahead distance (0.0 ~ 30.0)')
+                param4 = Gtk.Label('lookahead ratio (0.0 ~ 2.0)')
+                param5 = Gtk.Label('minimum lookahead distance (0.0 ~ 20.0)')
+                param6 = Gtk.Label('displacement threshold (0.0 ~ 1.0)')
+                param7 = Gtk.Label('relative angle threshold (0.0 ~ 90.0)')
+                param8 = Gtk.Label('linear interpolation')
+                param9 = Gtk.Label('publishs topic for steering robot')
+
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+                param_val4 = Gtk.Entry()
+                param_val5 = Gtk.Entry()
+                param_val6 = Gtk.Entry()
+                param_val7 = Gtk.Entry()
+                param_val8 = Gtk.Entry()
+                param_val9 = Gtk.Entry()
+
+                #default values
+                param_val1.set_text('0')
+                param_val2.set_text('5')
+                param_val3.set_text('4')
+                param_val4.set_text('2')
+                param_val5.set_text('4')
+                param_val6.set_text('0')
+                param_val7.set_text('0')
+                param_val8.set_text('False')
+                param_val9.set_text('True')
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param4, param3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param5, param4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param6, param5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param7, param6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param8, param7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param9, param8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(param_val4, param_val3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val5, param_val4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val6, param_val5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val7, param_val6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val8, param_val7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val9, param_val8, Gtk.PositionType.BOTTOM, 1, 1)
+            elif idx2 == 2: # mpc
+                param1 = Gtk.Label('show_debug_info')
+                param2 = Gtk.Label('publish_debug_values')
+                param3 = Gtk.Label('vehicle_model_type (kinematics, kinematics no delaym dynamics)')
+                param4 = Gtk.Label('qp_solver_type (unconstraint, unconstraint_fast)')
+                param5 = Gtk.Label('ctrl_period[s] (0.0 ~ 0.1)')
+                param6 = Gtk.Label('admisible_position_error (0.0 ~ 100.0)')
+                param7 = Gtk.Label('admisible_yaw_error_deg (0.0 ~ 360.0)')
+                param8 = Gtk.Label('mpc_prediction_horizon (1.0 ~ 300.0)')
+                param9 = Gtk.Label('mpc_prediction_sampling_time(0.01 ~ 1.0)')
+                param10 = Gtk.Label('mpc_weight_lat_error (0.0 ~ 10.0)')
+                param11 = Gtk.Label('mpc_weight_terminal_lat_error (0.0 ~ 100)')
+                param12 = Gtk.Label('mpc_weight_heading_error (0.0 ~ 10.0)')
+                param13 = Gtk.Label('mpc_weight_heading_error_squared_vel_coeff (0.0 ~ 10.0)')
+                param14 = Gtk.Label('mpc_weight_terminal_heading_error (0.0 ~ 100.0)')
+                param15 = Gtk.Label('mpc_weight_lat_jerk (0.0 ~ 10.0)')
+                param16 = Gtk.Label('mpc_weight_steering_input (0.0 ~ 10.0)')
+                param17 = Gtk.Label('mpc_weight_steering_input_squared_vel_coeff (0.0 ~ 10.0)')
+                param18 = Gtk.Label('mpc_zero_ff_steer_deg (0.0 ~ 10.0')
+                param19 = Gtk.Label('enable_path_smoothing')
+                param20 = Gtk.Label('path_smoothing_times (1 ~ 3)')
+                param21 = Gtk.Label('path_filter_moving_ave_num (1 ~ 50)')
+                param22 = Gtk.Label('curvature_smoothing_num (1 ~ 50)')
+                param23 = Gtk.Label('steering_lpf_cutoff_hz (0.1 ~ 10.0)')
+                param24 = Gtk.Label('vehicle_model_steer_tau (0.001 ~ 5.0)')
+                param25 = Gtk.Label('vehicle_model_wheelbase (0.1 ~ 10.0)')
+                param26 = Gtk.Label('steer_lim_deg (10.0 ~ 45.0)')
+
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+                param_val4 = Gtk.Entry()
+                param_val5 = Gtk.Entry()
+                param_val6 = Gtk.Entry()
+                param_val7 = Gtk.Entry()
+                param_val8 = Gtk.Entry()
+                param_val9 = Gtk.Entry()
+                param_val10 = Gtk.Entry()
+                param_val11 = Gtk.Entry()
+                param_val12 = Gtk.Entry()
+                param_val13 = Gtk.Entry()
+                param_val14 = Gtk.Entry()
+                param_val15 = Gtk.Entry()
+                param_val16 = Gtk.Entry()
+                param_val17 = Gtk.Entry()
+                param_val18 = Gtk.Entry()
+                param_val19 = Gtk.Entry()
+                param_val20 = Gtk.Entry()
+                param_val21 = Gtk.Entry()
+                param_val22 = Gtk.Entry()
+                param_val23 = Gtk.Entry()
+                param_val24 = Gtk.Entry()
+                param_val25 = Gtk.Entry()
+                param_val26 = Gtk.Entry()
+
+                #default values
+                param_val1.set_text('False') # show_debug_info
+                param_val2.set_text('False') # publish_debug_values
+                param_val3.set_text('kinematics') # vehicle_model_type
+                param_val4.set_text('unconstraint_fast') # qp_solver_type
+                param_val5.set_text('0.03') # ctrl_period
+                param_val6.set_text('5') # admisible_position_error
+                param_val7.set_text('90') # admisible_yaw_error_deg
+                param_val8.set_text('70') # mpc_prediction_horizon
+                param_val9.set_text('0.1') # mpc_prediction_sampling_time
+                param_val10.set_text('0.1') # mpc_weight_lat_error
+                param_val11.set_text('10') # mpc_weight_terminal_lat_error
+                param_val12.set_text('0') # mpc_weight_heading_error
+                param_val13.set_text('0.3') #  mpc_weight_heading_error_squared_vel_coeff
+                param_val14.set_text('0.1') # mpc_weight_terminal_heading_error
+                param_val15.set_text('0') # mpc_weight_lat_jerk
+                param_val16.set_text('1') # mpc_weight_steering_input 
+                param_val17.set_text('0.25') # mpc_weight_steering_input_squared_vel_coeff 
+                param_val18.set_text('2') # mpc_zero_ff_steer_deg
+                param_val19.set_text('True') # enable_path_smoothing
+                param_val20.set_text('1') # path_smoothing_times 
+                param_val21.set_text('35') # path_filter_moving_ave_num 
+                param_val22.set_text('35') #curvature_smoothing_num 
+                param_val23.set_text('3') #  steering_lpf_cutoff_hz 
+                param_val24.set_text('0.3') #  vehicle_model_steer_tau 
+                param_val25.set_text('2.9') # vehicle_model_wheelbase
+                param_val26.set_text('35') # steer_lim_deg
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param4, param3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param5, param4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param6, param5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param7, param6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param8, param7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param9, param8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param10, param9, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param11, param10, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param12, param11, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param13, param12, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param14, param13, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param15, param14, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param16, param15, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param17, param16, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param18, param17, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param19, param18, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param20, param19, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param21, param20, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param22, param21, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param23, param22, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param24, param23, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param25, param24, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param26, param25, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(param_val4, param_val3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val5, param_val4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val6, param_val5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val7, param_val6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val8, param_val7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val9, param_val8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val10, param_val9, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val11, param_val10, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val12, param_val11, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val13, param_val12, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(param_val14, param_val13, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val15, param_val14, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val16, param_val15, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val17, param_val16, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val18, param_val17, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val19, param_val18, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val20, param_val19, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val21, param_val20, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(param_val22, param_val21, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val23, param_val22, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val24, param_val23, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val25, param_val24, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val26, param_val25, Gtk.PositionType.BOTTOM, 1, 1)
 #            elif idx2 == 3: # hybride stenly
-#        elif idx1 == 2: # Localizer
-#            if idx2 == 0: # ndt matching
+        elif idx1 == 2: # Localizer
+            if idx2 == 0: # ndt matching
+                # /config/ndt
+                param1 = Gtk.Label('init_pos_gnss (Use GNSS : 1, No : 0)')
+                param2 = Gtk.Label('use_predict_pose (on : 1, off : 0)')
+                param3 = Gtk.Label('error_threshold (0.0 ~ 10.0)')
+                param4 = Gtk.Label('resolution (0.0 ~ 10.0)')
+                param5 = Gtk.Label('step_size (0.0 ~ 1.0)')
+                param6 = Gtk.Label('trans_epsilon (0.0 ~ 0.1)')
+                param7 = Gtk.Label('max_iterations (1.0 ~ 300.0)')
+                param8 = Gtk.Label('method_type (pcl_generic : 0, pcl_anh : 1, pcl_anh_gpu : 2, pcl_openmp : 3)')
+                # launch param
+                param9 = Gtk.Label('use_odom')
+                param10 = Gtk.Label('use_imu')
+                param11 = Gtk.Label('imu_upside_down')
+                param12 = Gtk.Label('imu_topic')
+                param13 = Gtk.Label('get_height')
+                param14 = Gtk.Label('output_log_data')
+
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+                param_val4 = Gtk.Entry()
+                param_val5 = Gtk.Entry()
+                param_val6 = Gtk.Entry()
+                param_val7 = Gtk.Entry()
+                param_val8 = Gtk.Entry()
+                param_val9 = Gtk.Entry()
+                param_val10 = Gtk.Entry()
+                param_val11 = Gtk.Entry()
+                param_val12 = Gtk.Entry()
+                param_val13 = Gtk.Entry()
+                param_val14 = Gtk.Entry()
+
+                #default values
+                param_val1.set_text('1') # init_pos_gnss
+                param_val2.set_text('0') # use_predict_pose
+                param_val3.set_text('1') # error_threshold
+                param_val4.set_text('1') # resolution
+                param_val5.set_text('0.1') # step_size
+                param_val6.set_text('0.01') # trans_epsilon
+                param_val7.set_text('30') # max_iterations
+                param_val8.set_text('0') # method_type
+                param_val9.set_text('False') # use_odom
+                param_val10.set_text('False') # use_imu
+                param_val11.set_text('False') # imu_upside_down
+                param_val12.set_text('/imu_raw') # imu_topic
+                param_val13.set_text('False') # get_height
+                param_val14.set_text('False') # output_log_data
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param4, param3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param5, param4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param6, param5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param7, param6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param8, param7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param9, param8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param10, param9, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param11, param10, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param12, param11, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param13, param12, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param14, param13, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(param_val4, param_val3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val5, param_val4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val6, param_val5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val7, param_val6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val8, param_val7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val9, param_val8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val10, param_val9, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val11, param_val10, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val12, param_val11, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val13, param_val12, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(param_val14, param_val13, Gtk.PositionType.BOTTOM, 1, 1)
 #            elif idx2 == 1: # ekf localizer
-#        elif idx1 == 3: # Decision Maker
-#            if idx2 == 0: # decision maker
+        elif idx1 == 3: # Decision Maker
+            if idx2 == 0: # decision maker
+                # /config/decision_maker
+                param1 = Gtk.Label('auto_mission_reload')
+                param2 = Gtk.Label('auto_engage')
+                param3 = Gtk.Label('auto_mission_change')
+                param4 = Gtk.Label('use_fms')
+                param5 = Gtk.Label('disuse_vector_map')
+                param6 = Gtk.Label('num_of_steer_behind (0 ~ 50)')
+                param7 = Gtk.Label('goal_threshold_dist (0.1 ~ 5.0)')
+                param8 = Gtk.Label('goal_threshold_vel (0.0 ~ 0.1)')
+                param9 = Gtk.Label('change_threshold_dist (0.0 ~ 10.0)')
+                param10 = Gtk.Label('change_threshold_angle (0.0 ~ 90.0)')
+                param11 = Gtk.Label('stopped_vel (0.0 ~ 5.0)')
+                # launch param
+                param12 = Gtk.Label('points_topic')
+                param13 = Gtk.Label('baselink_tf')
+                
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+                param_val4 = Gtk.Entry()
+                param_val5 = Gtk.Entry()
+                param_val6 = Gtk.Entry()
+                param_val7 = Gtk.Entry()
+                param_val8 = Gtk.Entry()
+                param_val9 = Gtk.Entry()
+                param_val10 = Gtk.Entry()
+                param_val11 = Gtk.Entry()
+                param_val12 = Gtk.Entry()
+                param_val13 = Gtk.Entry()
+
+                #default values
+                param_val1.set_text('False') # auto_mission_reload
+                param_val2.set_text('False') # auto_engage
+                param_val3.set_text('False') # auto_mission_change
+                param_val4.set_text('False') # use_fms
+                param_val5.set_text('True') # disuse_vector_map
+                param_val6.set_text('20') # num_of_steer_behind
+                param_val7.set_text('3') # goal_threshold_dist
+                param_val8.set_text('0.1') # goal_threshold_vel
+                param_val9.set_text('1') # change_threshold_dist
+                param_val10.set_text('15') # change_threshold_angle
+                param_val11.set_text('0.1') # stopped_vel
+                param_val12.set_text('/points_lanes') # points_topic
+                param_val13.set_text('base_link') # baselink_tf
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param4, param3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param5, param4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param6, param5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param7, param6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param8, param7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param9, param8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param10, param9, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param11, param10, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param12, param11, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param13, param12, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(param_val4, param_val3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val5, param_val4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val6, param_val5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val7, param_val6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val8, param_val7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val9, param_val8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val10, param_val9, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val11, param_val10, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val12, param_val11, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val13, param_val12, Gtk.PositionType.BOTTOM, 1, 1)                
 #        elif idx1 == 4: # LaneChange Manager
 #            if idx2 == 0: # lanechange manager
-#        elif idx1 == 5: : # Local Planner
-#            if idx2 == 0: # op commom params
+        elif idx1 == 5: # Local Planner
+            if idx2 == 0: # op commom params
+                # launch param
+                param1 = Gtk.Label('horizonDistance (1.0 ~ 250.0')
+                param2 = Gtk.Label('maxLocalPlanDistance (0.5 ~ 150.0)')
+                param3 = Gtk.Label('pathDensity (0.01 ~ 5.0)')
+                param4 = Gtk.Label('rollOutDensity (0.01 ~ 5.0)')
+                param5 = Gtk.Label('rollOutsNumber (0 ~20)')
+                param6 = Gtk.Label('maxVelocity (-1.0 ~ 20.0)')
+                param7 = Gtk.Label('maxAcceleration (0.01 ~ 25.0)')
+                param8 = Gtk.Label('maxDeceleration (-25.0 ~ -0.01)')
+                param9 = Gtk.Label('enableFollowing)')
+                param10 = Gtk.Label('enableSwerving')
+                param11 = Gtk.Label('minFollowingDistance (0.5 ~ 100.0)')
+                param12 = Gtk.Label('minDistanceToAvoid (0.1 ~ 80.0)')
+                param13 = Gtk.Label('maxDistanceToAvoid (0.05 ~ 60.0)')
+                param14 = Gtk.Label('enableStopSignBehavior')
+                param15 = Gtk.Label('enableTrafficLightBehavior')
+                param16 = Gtk.Label('enableLaneChange')
+                param17 = Gtk.Label('horizontalSafetyDistance (0.0 ~ 10.0')
+                param18 = Gtk.Label('verticalSafetyDistance (0.0 ~ 25.0')
+                param19 = Gtk.Label('velocitySource (Odometry : 0, Autoware : 1, Car Info : 2)')
+
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+                param_val4 = Gtk.Entry()
+                param_val5 = Gtk.Entry()
+                param_val6 = Gtk.Entry()
+                param_val7 = Gtk.Entry()
+                param_val8 = Gtk.Entry()
+                param_val9 = Gtk.Entry()
+                param_val10 = Gtk.Entry()
+                param_val11 = Gtk.Entry()
+                param_val12 = Gtk.Entry()
+                param_val13 = Gtk.Entry()
+                param_val14 = Gtk.Entry()
+                param_val15 = Gtk.Entry()
+                param_val16 = Gtk.Entry()
+                param_val17 = Gtk.Entry()
+                param_val18 = Gtk.Entry()
+                param_val19 = Gtk.Entry()
+
+                #default values
+                param_val1.set_text('120') # horizonDistance
+                param_val2.set_text('60') # maxLocalPlanDistance
+                param_val3.set_text('0.5') # pathDensity
+                param_val4.set_text('0.5') # rollOutDensity
+                param_val5.set_text('4') # rollOutsNumber
+                param_val6.set_text('15') # maxVelocity
+                param_val7.set_text('5') # maxAcceleration
+                param_val8.set_text('-3') # maxDeceleration
+                param_val9.set_text('True') # enableFollowing
+                param_val10.set_text('True') # enableSwerving
+                param_val11.set_text('30') # minFollowingDistance
+                param_val12.set_text('15') # minDistanceToAvoid
+                param_val13.set_text('4') # maxDistanceToAvoid
+                param_val14.set_text('True') # enableStopSignBehavior
+                param_val15.set_text('False') # enableTrafficLightBehavior
+                param_val16.set_text('False') # enableLaneChange 
+                param_val17.set_text('0.5') # horizontalSafetyDistance 
+                param_val18.set_text('0.5') # verticalSafetyDistance
+                param_val19.set_text('1') # velocitySource
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param4, param3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param5, param4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param6, param5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param7, param6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param8, param7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param9, param8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param10, param9, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param11, param10, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param12, param11, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param13, param12, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param14, param13, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param15, param14, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param16, param15, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param17, param16, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param18, param17, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param19, param18, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(param_val4, param_val3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val5, param_val4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val6, param_val5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val7, param_val6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val8, param_val7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val9, param_val8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val10, param_val9, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val11, param_val10, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val12, param_val11, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val13, param_val12, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val14, param_val13, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val15, param_val14, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val16, param_val15, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val17, param_val16, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val18, param_val17, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val19, param_val18, Gtk.PositionType.BOTTOM, 1, 1)
 #            elif idx2 == 1: # op trajectory generator
 #            elif idx2 == 2: # op motion predictor
 #            elif idx2 == 3: # op trajectory evaluator
