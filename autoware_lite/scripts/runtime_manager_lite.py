@@ -460,54 +460,7 @@ class MyWindow(Gtk.ApplicationWindow):
             line = p.readline()
             if i==2:
                 widget.pack_start(Gtk.Label(line), True, True, 0)
-    # callback function for the signal emitted by the cellrenderertoggle
-    def on_toggled(self, widget, path):
-        # the boolean value of the selected row
-        current_value = self.store[path][1]
-        # change the boolean value of the selected row in the model
-        self.store[path][1] = not current_value
-        # new current value!
-        current_value = not current_value
-        path_idx = path.split(':')
-        
-        if len(path_idx) == 2:
-            idx1 = int(path_idx[0])
-            idx2 = int(path_idx[1])
-            if current_value == True:
-                #print(instruction[idx1][idx2])
-                self.get_param_setting_win(idx1,idx2)
-            else :
-                print(instruction[idx1][idx2] + ' set false')
 
-        # if length of the path is 1 (that is, if we are selecting an author)
-        if len(path) == 1:
-            # get the iter associated with the path 
-            piter = self.store.get_iter(path)
-            # get the iter associated with its first child
-            citer = self.store.iter_children(piter)
-            # while there are children, change the state of their boolean value
-            # to the value of the author
-            while citer is not None:
-                self.store[citer][1] = current_value
-                citer = self.store.iter_next(citer)
-        # if the length of the path is not 1 (that is, if we are selecting a
-        # book)
-        elif len(path) != 1:
-            # get the first child of the parent of the book (the first book of
-            # the author)
-            citer = self.store.get_iter(path)
-            piter = self.store.iter_parent(citer)
-            citer = self.store.iter_children(piter)
-            # check if all the children are selected
-            all_selected = True
-            while citer is not None:
-                if self.store[citer][1] == False:
-                    all_selected = False
-                    break
-                citer = self.store.iter_next(citer)
-            # if they do, the author as well is selected; otherwise it is not
-            self.store[piter][1] = all_selected
-    
     def get_param_setting_win(self, idx1, idx2):
         setparam_win = Gtk.Window()
         setparam_win.set_title("set params")
@@ -1163,8 +1116,142 @@ class MyWindow(Gtk.ApplicationWindow):
         # 함수에서 명령어를 실행할건지 아니면 체크박스가 눌리면 불리는 콜백함수에서 실행할건지 고민 <- 리턴값이 애매해서 힘들듯
         #exec_button.connect("clicked", self.on_click_me_clicked)
         
+    def get_param_setting_win2(self, idx1, idx2):
+        setparam_win = Gtk.Window()
+        setparam_win.set_title("set params")
+        setparam_win.set_default_size(300, 400)
+        setparam_win.set_border_width(20)
+        grid = Gtk.Grid()
+        grid.set_column_homogeneous(True)
+        grid.set_row_homogeneous(True)
+        
+        #debug_label = Gtk.Label(str(idx1) + str(idx2))
+        setparam_win.add(grid)
+
+        set_param_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        grid.attach(set_param_box, 0, 0, 5, 10)
+
+        in_grid = Gtk.Grid()
+        in_grid.set_column_homogeneous(True)
+        in_grid.set_row_homogeneous(True)
+        exec_button = Gtk.Button.new_with_label("Execute")
+        
+        grid.attach_next_to(
+            exec_button, set_param_box, Gtk.PositionType.BOTTOM, 1, 1
+        )
+        set_param_box.pack_start(in_grid, True, True, 0)
+
+        if idx1 == 0: # Map
+            if idx2 == 0: # point cloud
+                param1 = Gtk.Label('PCD MAP path')
+                param_val1 = Gtk.Entry()
+                #default values
+                param_val1.set_text('path')
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+            elif idx2 == 1: # vector map
+                param1 = Gtk.Label('Vector MAP path ( path1 path2 path3 ... )')
+                param_val1 = Gtk.Entry()
+                #default values
+                param_val1.set_text('path1 path2 path3 ...')
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+            elif idx2 == 2: # point vector tf
+                param1 = Gtk.Label('tf launch path')
+                param_val1 = Gtk.Entry()
+                #default values
+                param_val1.set_text('path')
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+        #elif idx1 == 1: # Sensing
+            #if idx2 == 0: # sensor1
+            #elif idx2 == 1: # sensor2
+            #elif idx2 == 2: # sensor3
+            #elif idx2 == 3: # sensor4
+        elif idx1 == 2: # Point Downsampler
+            if idx2 == 0: # voxel grid filter
+                # launch params
+                param1 = Gtk.Label('node_name')
+                param2 = Gtk.Label('points_topic')
+                # /config/voxel_grid_filter
+                param3 = Gtk.Label('voxel_leaf_size (0.0 ~ 10.0)')
+                param4 = Gtk.Label('measurement_range (0 ~ 200)')
+
+                param_val1 = Gtk.Entry()
+                param_val2 = Gtk.Entry()
+                param_val3 = Gtk.Entry()
+                param_val4 = Gtk.Entry()
+
+                param_val1.set_text('voxel_grid_filter') # node_name
+                param_val2.set_text('/points_raw') # points_topic
+                param_val3.set_text('2') # voxel_leaf_size
+                param_val4.set_text('200') # measurement_range
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param4, param3, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(param_val1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(param_val2, param_val1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val3, param_val2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param_val4, param_val3, Gtk.PositionType.BOTTOM, 1, 1)
+
+        setparam_win.show_all()
+    
+    # def kill_node(self, idx1, idx2): # set free state of seleted node
+    # def system_estop(self): # if system has estop state, it save all nodes info before kill all nodes
+    # def rerun_routine(self): # do rerun routine, using saved all nodes info
 
 
+        # callback function for the signal emitted by the cellrenderertoggle
+    def on_toggled(self, widget, path):
+        # the boolean value of the selected row
+        current_value = self.store[path][1]
+        # change the boolean value of the selected row in the model
+        self.store[path][1] = not current_value
+        # new current value!
+        current_value = not current_value
+        path_idx = path.split(':')
+        
+        if len(path_idx) == 2:
+            idx1 = int(path_idx[0])
+            idx2 = int(path_idx[1])
+            if current_value == True:
+                #print(instruction[idx1][idx2])
+                self.get_param_setting_win(idx1,idx2)
+            else :
+                print(instruction[idx1][idx2] + ' set false')
+
+        # if length of the path is 1 (that is, if we are selecting an author)
+        if len(path) == 1:
+            # get the iter associated with the path 
+            piter = self.store.get_iter(path)
+            # get the iter associated with its first child
+            citer = self.store.iter_children(piter)
+            # while there are children, change the state of their boolean value
+            # to the value of the author
+            while citer is not None:
+                self.store[citer][1] = current_value
+                citer = self.store.iter_next(citer)
+        # if the length of the path is not 1 (that is, if we are selecting a
+        # book)
+        elif len(path) != 1:
+            # get the first child of the parent of the book (the first book of
+            # the author)
+            citer = self.store.get_iter(path)
+            piter = self.store.iter_parent(citer)
+            citer = self.store.iter_children(piter)
+            # check if all the children are selected
+            all_selected = True
+            while citer is not None:
+                if self.store[citer][1] == False:
+                    all_selected = False
+                    break
+                citer = self.store.iter_next(citer)
+            # if they do, the author as well is selected; otherwise it is not
+            self.store[piter][1] = all_selected
+    
     def on_toggled2(self, widget, path):
         current_value = self.store2[path][1]
         self.store2[path][1] = not current_value
@@ -1175,7 +1262,8 @@ class MyWindow(Gtk.ApplicationWindow):
             idx1 = int(path_idx[0])
             idx2 = int(path_idx[1])
             if current_value == True:
-                print(instruction2[idx1][idx2])
+                # print(instruction2[idx1][idx2])
+                self.get_param_setting_win2(idx1,idx2)
             else :
                 print(instruction2[idx1][idx2] + ' set false')
 
@@ -1215,4 +1303,3 @@ app = MyApplication()
 exit_status = app.run(sys.argv)
 print('exit')
 sys.exit(exit_status)
-
