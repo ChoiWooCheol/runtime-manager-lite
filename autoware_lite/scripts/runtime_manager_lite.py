@@ -10,6 +10,25 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 from gi.repository import Pango
 
+import std_msgs.msg
+from std_msgs.msg import Bool
+
+from autoware_config_msgs.msg import ConfigNDT
+from autoware_config_msgs.msg import ConfigVoxelGridFilter
+from autoware_config_msgs.msg import ConfigWaypointFollower
+from autoware_config_msgs.msg import ConfigTwistFilter
+from autoware_config_msgs.msg import ConfigDecisionMaker
+
+from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import PoseStamped
+from autoware_msgs.msg import ControlCommandStamped
+from autoware_msgs.msg import AccelCmd
+from autoware_msgs.msg import SteerCmd
+from autoware_msgs.msg import BrakeCmd
+from autoware_msgs.msg import IndicatorCmd
+from autoware_msgs.msg import LampCmd
+from autoware_msgs.msg import TrafficLight
+from autoware_msgs.msg import DetectedObjectArray
 
 nodes = [["Detection", ["LiDAR detector", False], ["camera detector", False], ["lidar_kf_contour_track", False], ["lidar camera fusion", False]],
          ["Follower", ["twist filter", False], ["pure pursuit", False], ["mpc", False], ["hybride stenly", False]],
@@ -20,22 +39,64 @@ nodes = [["Detection", ["LiDAR detector", False], ["camera detector", False], ["
             ["op_trajectory_evaluator", False],["op_behavior_selector", False]],
          ["Vehicle Setting", ["vel_pose_connect", False], ["baselink to localizer", False]]]
 
-instruction = [["roslaunch lidar_detect lidar_detect.launch", "roslaunch camera_detect camera_detect.launch",  "roslaunch vehicle_set lidar_kf_contour_track.launch", "roslaunch range_vision_fusion range_vision_fusion.launch"],
-               ["roslaunch follower pure_pursuit.launch", "roslaunch follower mpc.launch", "roslaunch follower hybride_stenly.launch"],
-               ["roslaunch ndt_matching ndt_matching.launch", "roslaunch ekf_localizer ekf_localizer.launch"],
-               ["roslaunch decision_maker decision_maker.launch"],
-               ["roslaunch lanechange_manager lanechange_manager.launch"],
-               ["roslaunch local_planner op_common_params.launch", "roslaunch local_planner op_trajectory_generator.launch", "roslaunch local_planner op_motion_predictor.launch",
-               "roslaunch local_planner op_trajectory_evaluator.launch", "roslaunch local_planner op_behavior_selector.launch"],
-               ["roslaunch vehicle_set vel_pose_connect.launch", "roslauch base2lidar base2lidar_tf.launch"]]
+kill_instruction = [["/obb_generator /qt_detect_node", "/yolo3_rects",  "/lidar_kf_contour_track", "/detection/fusion_tools/range_fusion_visualization_01 /range_vision_fusion_01"],
+               ["/twist_filter /twist_gate", "/pure_pursuit", "/mpc_follower /mpc_waypoints_converter", "/hybride_stenly"],
+               ["/ndt_matching", "/ekf_localizer"],
+               ["/decision_maker"],
+               ["/lanechange_manager"],
+               ["/op_common_params", "/op_trajectory_generator", "/op_motion_predictor", "/op_trajectory_evaluator", "/op_behavior_selector"],
+               ["/pose_relay /vel_relay", "/base_link_to_localizer"]]
 
 map_nodes = [["Map", ["point cloud", False], ["vector map", False], ["point_vector tf", False]],
              ["Sensing", ["sensor1", False], ["sensor2", False], ["sensor3", False], ["sensor4", False]],
              ["Point Downsampler", ["voxel grid filter", False]]]
 
-instruction2 = [["rosrun map_file points_map_loader", "rosrun map_file vector_map_loader", "roslaunch /path/tf.launch"],
-                ["roslaunch sensor_pkg sensor1.launch", "roslaunch sensor_pkg sensor2.launch", "roslaunch sensor_pkg sensor3.launch", "roslaunch sensor_pkg sensor4.launch"],
-                ["roslaunch points_downsampler points_downsample.launch"]]
+kill_instruction2 = [["/points_map_loader", "/vector_map_loader", "/world_to_map"],
+                ["/sensor1", "/sensor2", "/sensor3", "/sensor4"],
+                ["/voxel_grid_filter"]]
+
+node_sequence_list = []
+inst_sequence_list = []
+
+estop_state = False
+
+class AutowareConfigPublisher:
+    def OnConfigTwistFilter(self, data): # twist filter
+        pub = rospy.Publisher('/config/twist_filter', ConfigTwistFilter, latch=True, queue_size=10)
+        pub.publish(data)
+
+    def OnConfigWaypointFollower(self, data): # pure pursuit
+        pub = rospy.Publisher('/config/waypoint_follower', ConfigWaypointFollower, latch=True, queue_size=10)
+        pub.publish(data)
+
+    def OnConfigNdt(self, data): # ndt matching
+        pub = rospy.Publisher('/config/ndt', ConfigNdt, latch=True, queue_size=10)
+        pub.publish(data)
+
+    def OnConfigDecisionMaker(self, data): # decision maker
+        pub = rospy.Publisher('/config/decision_maker', ConfigDecisionMaker, latch=True, queue_size=10)
+        pub.publish(data)
+
+    def OnConfigVoxelGridFilter(self, data): # voxel grid filter
+        pub = rospy.Publisher('/config/voxel_grid_filter', ConfigVoxelGridFilter, latch=True, queue_size=10)
+        pub.publish(data)
+
+class AutowareAliveNodesCheck:
+    rospy.Subscriber('/detection/lidar_detector/objects', DetectedObjectArray, self.) # lidar detect
+    rospy.Subscriber('/detection/image_detector/objects', DetectedObjectArray, self.) # camera detect
+    rospy.Subscriber('/detection/fusion_tools/objects', DetectedObjectArray, self. ) # range vision fusion
+    rospy.Subscriber('tracked_objects', DetectedObjectArray, self. ) # kf contour
+    rospy.Subscriber('twist_cmd', TwistStamped, self. ) # twist filter
+    rospy.Subscriber('/ctrl_cmd', ControlCommandStamped, self. ) # ndt
+    rospy.Subscriber('/ndt_pose', PoseStamped, self. ) # pure pursuit or mpc or hybride stanley
+    rospy.Subscriber('/ekf_ndt_pose', PoseStamped, self. ) # ekf localizer
+    rospy.Subscriber('/decision_maker/state', std_msgs.msg.String, self. ) # decision maker
+    rospy.Subscriber('lanechange_check', std_msgs.msg.String, self. ) # lanechange manager
+    rospy.Subscriber('', , self. ) # 
+    rospy.Subscriber('', , self. ) # 
+    rospy.Subscriber('', , self. ) # 
+    rospy.Subscriber('', , self. ) # 
+     
 
 
 class MyWindow(Gtk.ApplicationWindow):
@@ -1198,11 +1259,35 @@ class MyWindow(Gtk.ApplicationWindow):
                 in_grid.attach_next_to(param_val4, param_val3, Gtk.PositionType.BOTTOM, 1, 1)
 
         setparam_win.show_all()
-    
-    # def kill_node(self, idx1, idx2): # set free state of seleted node
-    # def system_estop(self): # if system has estop state, it save all nodes info before kill all nodes
-    # def rerun_routine(self): # do rerun routine, using saved all nodes info
 
+    def kill_node(self, inst, idx1, idx2): # set free state of seleted node
+        if inst == 1:
+            os.system("rosnode kill " + kill_instruction[idx1][idx2])
+        elif inst == 2:
+            os.system("rosnode kill " + kill_instruction2[idx1][idx2])
+#
+#    def system_estop(self): # if system has estop state, it save all nodes info before kill all nodes
+#        print("E-STOP!! Killing all nodes .. ... ..")
+#        for i in range(len(node_sequence_list)):
+#            os.system("rosnode kill " + node_sequence_list[i])
+#        print("E-stop routine... Done")
+#        estop_state = True
+#
+#    def rerun_routine(self): # do rerun routine, using saved all nodes info
+#        if estop_state == False:
+#            return
+#
+#        print("Do rerun routine")
+#        print("----------- rerun node list -----------")
+#        for i in range(len(node_sequence_list)):
+#            print(node_sequence_list[i])
+#        print("---------------------------------------")
+#
+#        for i in range(len(node_sequence_list)):
+#            time.sleep(1)
+#            os.system(node_sequence_list[i])
+#
+#        estop_state = False
 
         # callback function for the signal emitted by the cellrenderertoggle
     def on_toggled(self, widget, path):
@@ -1221,7 +1306,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 #print(instruction[idx1][idx2])
                 self.get_param_setting_win(idx1,idx2)
             else :
-                print(instruction[idx1][idx2] + ' set false')
+                self.kill_node(1, idx1, idx2)
 
         # if length of the path is 1 (that is, if we are selecting an author)
         if len(path) == 1:
@@ -1265,7 +1350,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 # print(instruction2[idx1][idx2])
                 self.get_param_setting_win2(idx1,idx2)
             else :
-                print(instruction2[idx1][idx2] + ' set false')
+                self.kill_node(2, idx1, idx2)
 
         if len(path) == 1:
             piter2 = self.store2.get_iter(path)
