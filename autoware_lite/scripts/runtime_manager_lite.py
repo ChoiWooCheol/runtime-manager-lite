@@ -21,9 +21,11 @@ from autoware_config_msgs.msg import ConfigDecisionMaker
 
 from geometry_msgs.msg import TwistStamped
 from geometry_msgs.msg import PoseStamped
+from sensor_msgs.msg import PointCloud2
+
 from autoware_msgs.msg import ControlCommandStamped
-from autoware_msgs.msg import AccelCmd
-from autoware_msgs.msg import SteerCmd
+from autoware_msgs.msg import Lane
+from autoware_msgs.msg import LaneArray
 from autoware_msgs.msg import BrakeCmd
 from autoware_msgs.msg import IndicatorCmd
 from autoware_msgs.msg import LampCmd
@@ -58,6 +60,17 @@ kill_instruction2 = [["/points_map_loader", "/vector_map_loader", "/world_to_map
 node_sequence_list = []
 inst_sequence_list = []
 
+check_alive = [["", "", "", ""], # Detection
+               ["", ""], # Follower
+               ["", ""], # Localizer
+               [""], # Decision maker
+               [""], # LaneChange manager
+               ["", "", "", ""], # Local Planner
+               [""], # Vehicle Setting
+               ["", ""], # Map
+               ["", "", "", ""], # Sensing
+               [""]] # Point Downsampler
+
 estop_state = False
 
 class AutowareConfigPublisher:
@@ -82,22 +95,150 @@ class AutowareConfigPublisher:
         pub.publish(data)
 
 class AutowareAliveNodesCheck:
-    rospy.Subscriber('/detection/lidar_detector/objects', DetectedObjectArray, self.) # lidar detect
-    rospy.Subscriber('/detection/image_detector/objects', DetectedObjectArray, self.) # camera detect
-    rospy.Subscriber('/detection/fusion_tools/objects', DetectedObjectArray, self. ) # range vision fusion
-    rospy.Subscriber('tracked_objects', DetectedObjectArray, self. ) # kf contour
-    rospy.Subscriber('twist_cmd', TwistStamped, self. ) # twist filter
-    rospy.Subscriber('/ctrl_cmd', ControlCommandStamped, self. ) # ndt
-    rospy.Subscriber('/ndt_pose', PoseStamped, self. ) # pure pursuit or mpc or hybride stanley
-    rospy.Subscriber('/ekf_ndt_pose', PoseStamped, self. ) # ekf localizer
-    rospy.Subscriber('/decision_maker/state', std_msgs.msg.String, self. ) # decision maker
-    rospy.Subscriber('lanechange_check', std_msgs.msg.String, self. ) # lanechange manager
-    rospy.Subscriber('', , self. ) # 
-    rospy.Subscriber('', , self. ) # 
-    rospy.Subscriber('', , self. ) # 
-    rospy.Subscriber('', , self. ) # 
-     
+    def __init__(self):
+        rospy.Subscriber('/detection/lidar_detector/objects', DetectedObjectArray, self.checkLidarDetect) # lidar detect
+        rospy.Subscriber('/detection/image_detector/objects', DetectedObjectArray, self.checkCameraDetect) # camera detect
+        rospy.Subscriber('/detection/fusion_tools/objects', DetectedObjectArray, self.checkRangeVisionFusion) # range vision fusion
+        rospy.Subscriber('tracked_objects', DetectedObjectArray, self.checkKfContourTrack) # kf contour
+        rospy.Subscriber('twist_cmd', TwistStamped, self.checkTwistFilter) # twist filter
+        rospy.Subscriber('/ctrl_cmd', ControlCommandStamped, self.checkNdtMatching) # ndt
+        rospy.Subscriber('/ndt_pose', PoseStamped, self.checkWaypointFollower) # pure pursuit or mpc or hybride stanley
+        rospy.Subscriber('/ekf_ndt_pose', PoseStamped, self.checkEkfLocalizer) # ekf localizer
+        rospy.Subscriber('/decision_maker/state', std_msgs.msg.String, self.checkDecisionMaker) # decision maker
+        rospy.Subscriber('lanechange_check', std_msgs.msg.String, self.checkLaneChangeManager) # lanechange manager
+        rospy.Subscriber('/predicted_objects', DetectedObjectArray, self.checkOpMotionPredictor) # op motion predict
+        rospy.Subscriber('local_trajectory_cost', Lane, self.checkOpTrajectoryEval) # op trajectory evaluator
+        rospy.Subscriber('local_trajectories', LaneArray, self.checkOpTrajectoryGen) # op trajectory generator
+        rospy.Subscriber('final_waypoints', Lane, self.checkOpBehaviorSelector) # op behavior selector
+        rospy.Subscriber('/current_velocity', TwistStamped, self.checkVelPoseConnect) # vel pose connect
+        rospy.Subscriber('points_map', PointCloud2, self.checkPointMapLoader) # point map
+        rospy.Subscriber('vmap_stat', Bool, self.checkVectorMapLoader) # vector map
+        rospy.Subscriber('/filtered_points', PointCloud2, self.checkVoxelGridFilter) # voxel grid filter
 
+        self.deadCount = [[-1,-1,-1,-1], # Detection
+                          [-1,-1], # Follower
+                          [-1,-1], # Localizer
+                          [-1], # Decision maker
+                          [-1], # LaneChange manager
+                          [-1,-1,-1,-1], # Local Planner
+                          [-1], # Vehicle Setting
+                          [-1,-1], # Map
+                          [-1,-1,-1,-1], # Sensing
+                          [-1]] # Point Downsampler
+
+        self.mutex = threading.Lock()
+
+        self.update_thread = threading.Thread(target=self.upDateAliveState)
+        self.update_thread.daemon = True
+        self.update_thread.start()
+        self.reset_time = 5
+    def changeAliveState(self):
+        for i in range(len(self.deadCount)):
+            for j in range(len(self.deadCount[i])):
+                if self.deadCount[i][j] < 0:
+                    check_alive[i][j] = "X"
+                else:
+                    check_alive[i][j] = "True"
+    def checkLidarDetect(self, data):
+        if "/obb_generator /qt_detect_node" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[0][0]   = self.reset_time
+            self.mutex.release()
+    def checkCameraDetect(self, data):
+        if "/yolo3_rects" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[0][1]   = self.reset_time
+            self.mutex.release()
+    def checkRangeVisionFusion(self, data):
+        if "/lidar_kf_contour_track" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[0][2]   = self.reset_time
+            self.mutex.release()
+    def checkKfContourTrack(self, data):
+        if "/detection/fusion_tools/range_fusion_visualization_01 /range_vision_fusion_01" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[0][3]   = self.reset_time
+            self.mutex.release()
+    def checkTwistFilter(self, data):
+        if "/twist_filter /twist_gate" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[1][0]   = self.reset_time
+            self.mutex.release()
+    def checkWaypointFollower(self, data):
+        self.mutex.acquire()
+        self.deadCount[1][1]   = self.reset_time
+        self.mutex.release()
+    def checkNdtMatching(self, data):
+        if "/ndt_matching" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[2][0]   = self.reset_time
+            self.mutex.release()
+    def checkEkfLocalizer(self, data):
+        if "/ekf_localizer" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[2][1]   = self.reset_time
+            self.mutex.release()
+    def checkDecisionMaker(self, data):
+        if "/decision_maker" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[3][0]   = self.reset_time
+            self.mutex.release()
+    def checkLaneChangeManager(self, data):
+        if "/lanechange_manager" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[4][0]   = self.reset_time
+            self.mutex.release()
+    def checkOpMotionPredictor(self, data):
+        if "/op_motion_predictor" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[5][0]   = self.reset_time
+            self.mutex.release()
+    def checkOpTrajectoryEval(self, data):
+        if "/op_trajectory_evaluator" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[5][1]   = self.reset_time
+            self.mutex.release()
+    def checkOpTrajectoryGen(self, data):
+        if "/op_trajectory_generator" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[5][2]   = self.reset_time
+            self.mutex.release()
+    def checkOpBehaviorSelector(self, data):
+        if "/op_behavior_selector" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[5][3]   = self.reset_time
+            self.mutex.release()
+    def checkVelPoseConnect(self, data):
+        if "/pose_relay /vel_relay" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[6][0]   = self.reset_time
+            self.mutex.release()
+    def checkPointMapLoader(self, data):
+        if "/points_map_loader" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[7][0]   = self.reset_time
+            self.mutex.release()
+    def checkVectorMapLoader(self, data):
+        if "/vector_map_loader" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[7][1]   = self.reset_time
+            self.mutex.release()
+    def checkVoxelGridFilter(self, data):
+        if "/voxel_grid_filter" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[9][0]   = self.reset_time
+            self.mutex.release()
+
+    def upDateAliveState(self):
+        while 1:
+            time.sleep(1)
+            self.mutex.acquire()
+            for i in range(len(self.deadCount)):
+                for j in range(len(self.deadCount[i])):
+                    self.deadCount[i][j] = self.deadCount[i][j] - 1
+                    #print('deadCount'+str(i)+str(j)+str(self.deadCount[i][j]))
+
+            self.mutex.release()
 
 class MyWindow(Gtk.ApplicationWindow):
 
@@ -132,7 +273,11 @@ class MyWindow(Gtk.ApplicationWindow):
             while j < len(map_nodes[i]):
                 self.store2.append(piter2, map_nodes[i][j])
                 j += 1
-                
+        
+        # generate autoware checking class  
+        self.config_pub = AutowareConfigPublisher()
+        self.alive_node_check = AutowareAliveNodesCheck()
+        
         # the treeview shows the model
         # create a treeview on the model self.store
         self.nodes_Lwin = Gtk.ScrolledWindow()
@@ -163,7 +308,7 @@ class MyWindow(Gtk.ApplicationWindow):
         view.append_column(column_in_out)
 
         # connect the cellrenderertoggle with a callback function
-        renderer_in_out.connect("toggled", self.on_toggled)
+        renderer_in_out.connect("toggled", self.onToggled)
 
         view2 = Gtk.TreeView()
         autoware_box.pack_start(self.nodes_Rwin, True, True, 0)
@@ -175,7 +320,7 @@ class MyWindow(Gtk.ApplicationWindow):
         renderer_in_out2 = Gtk.CellRendererToggle()
         column_in_out2 = Gtk.TreeViewColumn("Execute", renderer_in_out2, active=1)
         view2.append_column(column_in_out2)
-        renderer_in_out2.connect("toggled", self.on_toggled2)
+        renderer_in_out2.connect("toggled", self.onToggled2)
         
         
         # Resource Check Frame
@@ -236,7 +381,7 @@ class MyWindow(Gtk.ApplicationWindow):
         
         cpu_frame.add(self.cpu_box)
 
-        self.timeout_id = GLib.timeout_add(50, self.on_timeout, None)
+        self.timeout_id = GLib.timeout_add(50, self.onTimeOut, None)
         
         # parametor stack setting
         parameter_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -293,7 +438,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.alive_view_idx = len(component_store) - 1
 
         component_combo = Gtk.ComboBox.new_with_model_and_entry(component_store)
-        component_combo.connect("changed", self.on_component_combo_changed)
+        component_combo.connect("changed", self.onComponentComboChanged)
         component_combo.set_entry_text_column(1)
 
         self.grid.attach_next_to(
@@ -308,17 +453,21 @@ class MyWindow(Gtk.ApplicationWindow):
         
         #self.param_Lchildbox.pack_start(Gtk.Label("left"),True, True, 0)
         #self.param_Rchildbox.pack_start(Gtk.Label("right"),True, True, 0)
-        mem_thread = threading.Thread(target=self.set_text, args=(self.mem_box,))
-        mem_thread.daemon = True
-        mem_thread.start()
+        self.mem_thread = threading.Thread(target=self.setText, args=(self.mem_box,))
+        self.mem_thread.daemon = True
+        self.mem_thread.start()
 
-        cpu_thread = threading.Thread(target=self.set_cpu_text, args=(self.cpu_box,))
-        cpu_thread.daemon = True
-        cpu_thread.start()
+        self.cpu_thread = threading.Thread(target=self.setCpuText, args=(self.cpu_box,))
+        self.cpu_thread.daemon = True
+        self.cpu_thread.start()
         
-        disk_thread = threading.Thread(target=self.get_disk_space, args=(self.disk_box,))
-        disk_thread.daemon = True
-        disk_thread.start()
+        self.disk_thread = threading.Thread(target=self.getDistSpace, args=(self.disk_box,))
+        self.disk_thread.daemon = True
+        self.disk_thread.start()
+
+        #mem_thread.join()
+        #cpu_thread.join()
+        #disk_thread.join()
 
         stack = Gtk.Stack()
         stack.add_titled(autoware_box, 'child1', 'Autoware Nodes')  
@@ -343,8 +492,9 @@ class MyWindow(Gtk.ApplicationWindow):
         # self.add(view)
 
 
-    def on_component_combo_changed(self, combo):
+    def onComponentComboChanged(self, combo):
         tree_iter = combo.get_active_iter()
+        self.alive_node_check.changeAliveState()
         if tree_iter is not None:
             model = combo.get_model()
             row_id, name = model[tree_iter][:2]
@@ -352,42 +502,37 @@ class MyWindow(Gtk.ApplicationWindow):
             self.alive_view_idx = row_id
 
             detect_txt = 'Detection : \n' \
-                            + '     LiDAR detector ---------------> ' + 'True' + '\n'\
-                            + '     camera detector -------------> ' + 'True' + '\n'\
-                            + '     lidar_kf_contour_track --> ' + 'True' + '\n'\
-                            + '     lidar camera fusion --------> ' + 'True' + '\n\n' 
+                            + '     LiDAR detector ---------------> ' + check_alive[0][0] + '\n'\
+                            + '     camera detector -------------> '  + check_alive[0][1] + '\n'\
+                            + '     lidar_kf_contour_track --> '      + check_alive[0][2] + '\n'\
+                            + '     lidar camera fusion --------> '   + check_alive[0][3] + '\n\n' 
             follower_txt = 'Follower : \n' \
-                            + '     twist filter ---------------> ' + 'True' + '\n'\
-                            + '     pure pursuit ------------> ' + 'True' + '\n'\
-                            + '     mpc --------------------------> ' + 'True' + '\n'\
-                            + '     hybride stenly ---------> ' + 'True' + '\n\n'
+                            + '     twist filter ---------------> '   + check_alive[1][0] + '\n'\
+                            + '     follower ------------> '          + check_alive[1][1] + '\n\n'
             localizer_txt = 'Localizer : \n' \
-                            + '     ndt matching --------> ' + 'True' + '\n'\
-                            + '     ekf localizer -----------> ' + 'True' + '\n\n'
+                            + '     ndt matching --------> '          + check_alive[2][0] + '\n'\
+                            + '     ekf localizer -----------> '      + check_alive[2][1] + '\n\n'
             decision_txt = 'Decision Maker : \n'\
-                            + '     decision maker --------->' + 'Ture' + '\n\n'
+                            + '     decision maker --------->'        + check_alive[3][0] + '\n\n'
             lanechange_txt = 'LaneChange Manager : \n' \
-                            + '     lanechange manager ------> ' + 'True' + '\n\n'
+                            + '     lanechange manager ------> '      + check_alive[4][0] + '\n\n'
             local_plan_txt = 'Local Planner : \n' \
-                            + '     op_common_params ---------> ' + 'True' + '\n'\
-                            + '     op_trajectory_generator --> ' + 'True' + '\n'\
-                            + '     op_motion_predictor --------> ' + 'True' + '\n'\
-                            + '     op_trajectory_evaluator ---> ' + 'True' + '\n'\
-                            + '     op_behavior_selector -------> ' + 'True' + '\n\n'
+                            + '     op_motion_predictor --------> '   + check_alive[5][0] + '\n'\
+                            + '     op_trajectory_evaluator ---> '    + check_alive[5][1] + '\n'\
+                            + '     op_trajectory_generator --> '     + check_alive[5][2] + '\n'\
+                            + '     op_behavior_selector -------> '   + check_alive[5][3] + '\n\n'
             vehicle_txt = 'Vehicle Setting : \n' \
-                            + '     vel_pose_connect --------> ' + 'True' + '\n'\
-                            + '     baselink to localizer -----> ' + 'True' + '\n\n'
+                            + '     vel_pose_connect --------> '      + check_alive[6][0] + '\n\n'
             map_txt = 'Map : \n' \
-                            + '     point cloud -------------> ' + 'True' + '\n'\
-                            + '     vector map -------------> ' + 'True' + '\n'\
-                            + '     point_vector tf -------> ' + 'True' + '\n\n'
+                            + '     point cloud -------------> '      + check_alive[7][0] + '\n'\
+                            + '     vector map -------------> '       + check_alive[7][1] + '\n\n'
             sensing_txt = 'Sensing : \n'\
-                            + '     sensor1 -------> ' + 'True' + '\n'\
-                            + '     sensor2 -------> ' + 'True' + '\n'\
-                            + '     sensor3 -------> ' + 'True' + '\n'\
-                            + '     sensor4 -------> ' + 'True' + '\n\n'
+                            + '     sensor1 -------> ' + check_alive[8][0] + '\n'\
+                            + '     sensor2 -------> ' + check_alive[8][1] + '\n'\
+                            + '     sensor3 -------> ' + check_alive[8][2] + '\n'\
+                            + '     sensor4 -------> ' + check_alive[8][3] + '\n\n'
             downsampler_txt = 'Point Downsampler : \n'\
-                            + '     voxel grid filter -----> ' + 'True' + '\n\n'
+                            + '     voxel grid filter -----> ' + check_alive[9][0] + '\n\n'
 
             if self.alive_view_idx == 0:
                 txt = detect_txt
@@ -418,9 +563,9 @@ class MyWindow(Gtk.ApplicationWindow):
             entry = combo.get_child()
             print("Entered: %s" % entry.get_text())
 
-    def on_timeout(self, user_data):
+    def onTimeOut(self, user_data):
         """
-        Update value on the progress bar
+        Update CPU resource value on the progress bar
         """
         cpu_cnt = int(os.cpu_count())
         i = 0
@@ -436,7 +581,7 @@ class MyWindow(Gtk.ApplicationWindow):
         # continues to get called
         return True
 
-    def set_cpu_text(self, widget):
+    def setCpuText(self, widget):
         cpu_core_count = int(os.cpu_count())
 
         while 1:
@@ -475,7 +620,7 @@ class MyWindow(Gtk.ApplicationWindow):
                         #print(line)
                     break
     
-    def set_text(self, widget):
+    def setText(self, widget):
         total = 0
         while 1:
             p = os.popen('free')
@@ -496,7 +641,7 @@ class MyWindow(Gtk.ApplicationWindow):
             self.mem_label.set_text(txt)
             time.sleep(1)
 
-    def get_disk_space(self, widget):
+    def getDistSpace(self, widget):
         while 1:
             p = os.popen("df -h /")
             i = 0
@@ -513,7 +658,7 @@ class MyWindow(Gtk.ApplicationWindow):
             self.disk_label.set_text(txt)
             time.sleep(1)
             
-    def get_mem_resource(self, widget):
+    def getMemResource(self, widget):
         p = os.popen('free -h')
         i = 0
         while 1:
@@ -522,7 +667,7 @@ class MyWindow(Gtk.ApplicationWindow):
             if i==2:
                 widget.pack_start(Gtk.Label(line), True, True, 0)
 
-    def get_param_setting_win(self, idx1, idx2):
+    def getParamSettingWin(self, idx1, idx2):
         setparam_win = Gtk.Window()
         setparam_win.set_title("set params")
         setparam_win.set_default_size(300, 400)
@@ -531,7 +676,6 @@ class MyWindow(Gtk.ApplicationWindow):
         grid.set_column_homogeneous(True)
         grid.set_row_homogeneous(True)
         
-        #debug_label = Gtk.Label(str(idx1) + str(idx2))
         setparam_win.add(grid)
 
         set_param_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -541,6 +685,7 @@ class MyWindow(Gtk.ApplicationWindow):
         in_grid.set_column_homogeneous(True)
         in_grid.set_row_homogeneous(True)
         exec_button = Gtk.Button.new_with_label("Execute")
+        exec_button.connect("clicked", self.onClickedExcute, idx1, idx2)
         
         grid.attach_next_to(
             exec_button, set_param_box, Gtk.PositionType.BOTTOM, 1, 1
@@ -556,7 +701,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 param_val1 = Gtk.Entry()
                 param_val2 = Gtk.Entry()
                 param_val3 = Gtk.Entry()
-
+                
                 #default values
                 param_val1.set_text('25')
                 param_val2.set_text('100')
@@ -575,7 +720,7 @@ class MyWindow(Gtk.ApplicationWindow):
             if idx2 == 0: # twist filter /config/twist_filter
                 param1 = Gtk.Label('lateral_accel_limit (0.0 ~ 5.0)')
                 param2 = Gtk.Label('lowpass_gain_linear_x (0.0 ~ 1.0)')
-                param3 = Gtk.Label('lowapss_gain_angular_z (0.0 ~ 1.0)')
+                param3 = Gtk.Label('lowpass_gain_angular_z (0.0 ~ 1.0)')
 
                 param_val1 = Gtk.Entry()
                 param_val2 = Gtk.Entry()
@@ -1177,7 +1322,7 @@ class MyWindow(Gtk.ApplicationWindow):
         # 함수에서 명령어를 실행할건지 아니면 체크박스가 눌리면 불리는 콜백함수에서 실행할건지 고민 <- 리턴값이 애매해서 힘들듯
         #exec_button.connect("clicked", self.on_click_me_clicked)
         
-    def get_param_setting_win2(self, idx1, idx2):
+    def getParamSettingWin2(self, idx1, idx2):
         setparam_win = Gtk.Window()
         setparam_win.set_title("set params")
         setparam_win.set_default_size(300, 400)
@@ -1196,7 +1341,8 @@ class MyWindow(Gtk.ApplicationWindow):
         in_grid.set_column_homogeneous(True)
         in_grid.set_row_homogeneous(True)
         exec_button = Gtk.Button.new_with_label("Execute")
-        
+        exec_button.connect("clicked", self.onClickedExcute, idx1, idx2)
+
         grid.attach_next_to(
             exec_button, set_param_box, Gtk.PositionType.BOTTOM, 1, 1
         )
@@ -1260,7 +1406,11 @@ class MyWindow(Gtk.ApplicationWindow):
 
         setparam_win.show_all()
 
-    def kill_node(self, inst, idx1, idx2): # set free state of seleted node
+    def onClickedExcute(self, widget, idx1, idx2):
+        print(idx1)
+        print(idx2)
+
+    def killNode(self, inst, idx1, idx2): # set free state of seleted node
         if inst == 1:
             os.system("rosnode kill " + kill_instruction[idx1][idx2])
         elif inst == 2:
@@ -1290,7 +1440,7 @@ class MyWindow(Gtk.ApplicationWindow):
 #        estop_state = False
 
         # callback function for the signal emitted by the cellrenderertoggle
-    def on_toggled(self, widget, path):
+    def onToggled(self, widget, path):
         # the boolean value of the selected row
         current_value = self.store[path][1]
         # change the boolean value of the selected row in the model
@@ -1304,10 +1454,10 @@ class MyWindow(Gtk.ApplicationWindow):
             idx2 = int(path_idx[1])
             if current_value == True:
                 #print(instruction[idx1][idx2])
-                self.get_param_setting_win(idx1,idx2)
+                self.getParamSettingWin(idx1,idx2)
             else :
-                self.kill_node(1, idx1, idx2)
-
+                self.killNode(1, idx1, idx2)
+        
         # if length of the path is 1 (that is, if we are selecting an author)
         if len(path) == 1:
             # get the iter associated with the path 
@@ -1337,7 +1487,7 @@ class MyWindow(Gtk.ApplicationWindow):
             # if they do, the author as well is selected; otherwise it is not
             self.store[piter][1] = all_selected
     
-    def on_toggled2(self, widget, path):
+    def onToggled2(self, widget, path):
         current_value = self.store2[path][1]
         self.store2[path][1] = not current_value
         current_value = not current_value
@@ -1348,9 +1498,9 @@ class MyWindow(Gtk.ApplicationWindow):
             idx2 = int(path_idx[1])
             if current_value == True:
                 # print(instruction2[idx1][idx2])
-                self.get_param_setting_win2(idx1,idx2)
+                self.getParamSettingWin2(idx1,idx2)
             else :
-                self.kill_node(2, idx1, idx2)
+                self.killNode(2, idx1, idx2)
 
         if len(path) == 1:
             piter2 = self.store2.get_iter(path)
@@ -1376,10 +1526,10 @@ class MyApplication(Gtk.Application):
 
     def __init__(self):
         Gtk.Application.__init__(self)
-
+        
     def do_activate(self):
-        win = MyWindow(self)
-        win.show_all()
+        self.win = MyWindow(self)
+        self.win.show_all()
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
