@@ -11,6 +11,8 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 from gi.repository import Pango
 
+import yaml
+
 import std_msgs.msg
 from std_msgs.msg import Bool
 
@@ -52,7 +54,8 @@ kill_instruction = [["/obb_generator /qt_detect_node", "/vision_darknet_detect /
 
 map_nodes = [["Map", ["point cloud", False], ["vector map", False], ["point_vector tf", False]],
              ["Sensing", ["sensor1", False], ["sensor2", False], ["sensor3", False], ["sensor4", False]],
-             ["Point Downsampler", ["voxel grid filter", False]]]
+             ["Point Downsampler", ["voxel grid filter", False]],
+             ["QUICK START", ["map_quick_start", False], ["sensing_quick_start", False]]]
 
 kill_instruction2 = [["/points_map_loader", "/vector_map_loader", "/world_to_map"],
                 ["/sensor1", "/sensor2", "/sensor3", "/sensor4"],
@@ -74,26 +77,31 @@ check_alive = [["", "", "", ""], # Detection
 
 estop_state = False
 
+def getDirPath():
+	return os.path.abspath(os.path.dirname(__file__)) + "/"
+
 class AutowareConfigPublisher:
-    def OnConfigTwistFilter(self, data): # twist filter
-        pub = rospy.Publisher('/config/twist_filter', ConfigTwistFilter, latch=True, queue_size=10)
-        pub.publish(data)
+    def __init__(self):
+        self.pub_twist_filter       = rospy.Publisher('/config/twist_filter', ConfigTwistFilter, latch=True, queue_size=10)
+        self.pub_waypoint_follower  = rospy.Publisher('/config/waypoint_follower', ConfigWaypointFollower, latch=True, queue_size=10)
+        self.pub_ndt                = rospy.Publisher('/config/ndt', ConfigNDT, latch=True, queue_size=10)
+        self.pub_decision_maker     = rospy.Publisher('/config/decision_maker', ConfigDecisionMaker, latch=True, queue_size=10)
+        self.pub_voxel_grid_filter  = rospy.Publisher('/config/voxel_grid_filter', ConfigVoxelGridFilter, latch=True, queue_size=10)
 
-    def OnConfigWaypointFollower(self, data): # pure pursuit
-        pub = rospy.Publisher('/config/waypoint_follower', ConfigWaypointFollower, latch=True, queue_size=10)
-        pub.publish(data)
+    def onConfigTwistFilter(self, data): # twist filter
+        self.pub_twist_filter.publish(data)
 
-    def OnConfigNdt(self, data): # ndt matching
-        pub = rospy.Publisher('/config/ndt', ConfigNdt, latch=True, queue_size=10)
-        pub.publish(data)
+    def onConfigWaypointFollower(self, data): # pure pursuit
+        self.pub_waypoint_follower.publish(data)
 
-    def OnConfigDecisionMaker(self, data): # decision maker
-        pub = rospy.Publisher('/config/decision_maker', ConfigDecisionMaker, latch=True, queue_size=10)
-        pub.publish(data)
+    def onConfigNdt(self, data): # ndt matching
+        self.pub_ndt.publish(data)
 
-    def OnConfigVoxelGridFilter(self, data): # voxel grid filter
-        pub = rospy.Publisher('/config/voxel_grid_filter', ConfigVoxelGridFilter, latch=True, queue_size=10)
-        pub.publish(data)
+    def onConfigDecisionMaker(self, data): # decision maker
+        self.pub_decision_maker.publish(data)
+
+    def onConfigVoxelGridFilter(self, data): # voxel grid filter
+        self.pub_voxel_grid_filter.publish(data)
 
 class AutowareAliveNodesCheck:
     def __init__(self):
@@ -397,7 +405,7 @@ class MyWindow(Gtk.ApplicationWindow):
 
         self.param_Rframe.set_shadow_type(1)
         self.param_Rframe.set_border_width(2)
-        self.param_Rframe.set_label("alive parameters")
+        self.param_Rframe.set_label("alive parameter")
 
         self.param_Lwin = Gtk.ScrolledWindow()
         self.param_Lwin.set_border_width(2)
@@ -461,7 +469,7 @@ class MyWindow(Gtk.ApplicationWindow):
 
         stack = Gtk.Stack()
         stack.add_titled(autoware_box, 'child1', 'Autoware Nodes')  
-        stack.add_titled(parameter_box, 'child2', 'Parameter Check')  
+        stack.add_titled(parameter_box, 'child2', 'Alive Check')  
         stack.add_titled(resource_box, 'child3', 'Resource Check')  
 
         stack_switcher = Gtk.StackSwitcher(stack=stack) 
@@ -471,16 +479,6 @@ class MyWindow(Gtk.ApplicationWindow):
         
         self.set_titlebar(header_bar) 
         self.add(stack)
-
-        #total = 0
-        #while 1:
-        #    time.sleep(1)
-        #    total = total + 1
-        #    txt = str(total) + 'resource check'
-        #    self.mem_box.pack_start(Gtk.Label(txt), True, True, 0)
-        # add the treeview to the window
-        # self.add(view)
-
 
     def onComponentComboChanged(self, combo):
         tree_iter = combo.get_active_iter()
@@ -930,9 +928,10 @@ class MyWindow(Gtk.ApplicationWindow):
                 param4 = Gtk.Label('resolution (0.0 ~ 10.0)')
                 param5 = Gtk.Label('step_size (0.0 ~ 1.0)')
                 param6 = Gtk.Label('trans_epsilon (0.0 ~ 0.1)')
-                param7 = Gtk.Label('max_iterations (1.0 ~ 300.0)')
-                param8 = Gtk.Label('method_type (pcl_generic : 0, pcl_anh : 1, pcl_anh_gpu : 2, pcl_openmp : 3)')
+                param7 = Gtk.Label('max_iterations (1 ~ 300)')
+
                 # launch param
+                param8 = Gtk.Label('method_type (pcl_generic : 0, pcl_anh : 1, pcl_anh_gpu : 2, pcl_openmp : 3)')
                 param9 = Gtk.Label('use_odom')
                 param10 = Gtk.Label('use_imu')
                 param11 = Gtk.Label('imu_upside_down')
@@ -1321,7 +1320,9 @@ class MyWindow(Gtk.ApplicationWindow):
                 in_grid.attach_next_to(pv8, pv7, Gtk.PositionType.BOTTOM, 1, 1)
                 in_grid.attach_next_to(pv9, pv8, Gtk.PositionType.BOTTOM, 1, 1)
                 param_list = [pv1,pv2,pv3,pv4,pv5,pv6,pv7,pv8,pv9]
-
+        # elif idx1 == 7: # quick start
+        #     if idx2 == 0: # all quick start
+            
         exec_button.connect("clicked", self.onClickedExcute, idx1, idx2, param_list, setparam_win)
         setparam_win.show_all()
         # 체크 눌리면 파라미터 세팅하는 창 만들기 고민 하다가 집갔음.
@@ -1347,8 +1348,7 @@ class MyWindow(Gtk.ApplicationWindow):
         in_grid.set_column_homogeneous(True)
         in_grid.set_row_homogeneous(True)
         exec_button = Gtk.Button.new_with_label("Execute")
-        exec_button.connect("clicked", self.onClickedExcute2, idx1, idx2)
-
+        
         grid.attach_next_to(
             exec_button, set_param_box, Gtk.PositionType.BOTTOM, 1, 1
         )
@@ -1413,9 +1413,18 @@ class MyWindow(Gtk.ApplicationWindow):
                 in_grid.attach_next_to(pv3, pv2, Gtk.PositionType.BOTTOM, 1, 1)
                 in_grid.attach_next_to(pv4, pv3, Gtk.PositionType.BOTTOM, 1, 1)
                 param_list = [pv1,pv2,pv3,pv4]
+        # elif idx1 == 3: # quick start
+        #     if idx2 == 0: # map quick start
+        #     elif idx2 == 1: # sensing quick start
 
+        exec_button.connect("clicked", self.onClickedExcute2, idx1, idx2, param_list, setparam_win)
         setparam_win.show_all()
     
+    def onExcuteThread(self, cmd):
+        exec_thread = threading.Thread(target=self.excuteCore, args=(cmd,))
+        exec_thread.daemon = True
+        exec_thread.start()
+
     def excuteCore(self, cmd):
         subprocess.check_call([cmd], shell=True)
 
@@ -1426,10 +1435,15 @@ class MyWindow(Gtk.ApplicationWindow):
                 node_sequence_list.append('/obb_generator /qt_detect_node')
             elif idx2 == 1: # camera detector
                 run_cmd = 'None'
-                #run_cmd = 'roslaunch vision_darknet_detect vision_yolo3_detect.launch'+/
-                #            'score_threshold:=' + plist[] + 'nms_threshold:' + plist[] + 'image_src:' + plist[] + /
-                #            'network_definition_file:=' + plist[] + 'pretrained_model_file:=' + plist[] + /
-                #            'names_file:=' + plist[] + 'gpu_device_id:' + plist[] + 'camera_id:=' + plist[]
+                #run_cmd = ('roslaunch vision_darknet_detect vision_yolo3_detect.launch'+
+                #            'score_threshold:=' + plist[].get_text()
+                #            + 'nms_threshold:' + plist[].get_text()
+                #            + 'image_src:' + plist[].get_text()
+                #            + 'network_definition_file:=' + plist[].get_text() 
+                #            + 'pretrained_model_file:=' + plist[].get_text()
+                #            + 'names_file:=' + plist[].get_text()
+                #            + 'gpu_device_id:' + plist[].get_text()
+                #            + 'camera_id:=' + plist[].get_text())
                 node_sequence_list.append('/vision_darknet_detect /yolo3_rects')
             elif idx2 == 2: # lidar kf contour track
                 run_cmd = 'None'
@@ -1439,42 +1453,104 @@ class MyWindow(Gtk.ApplicationWindow):
                 node_sequence_list.append('/detection/fusion_tools/range_fusion_visualization_01 /range_vision_fusion_01')
         elif idx1 == 1: # Follower
             if idx2 == 0: # twist filter /config/twist_filter
-                # self.config_pub.OnConfigTwistFilter(data)
+                data = ConfigTwistFilter()
+                data.lateral_accel_limit    = float(plist[0].get_text())
+                data.lowpass_gain_linear_x  = float(plist[1].get_text())
+                data.lowpass_gain_angular_z = float(plist[2].get_text())
+                self.config_pub.onConfigTwistFilter(data)
                 run_cmd = 'roslaunch waypoint_follower twist_filter.launch'
                 node_sequence_list.append('/twist_filter /twist_gate')
             elif idx2 == 1: # pure pursuit /config/waypoint_follwer
-                # self.config_pub.OnConfigWaypointFollower(data)
-                run_cmd = 'roslaunch waypoint_follower pure_pursuit.launch s_linear_interpolation:=' + plist[0].get_text() + ' publishes_for_steering_robot:=' + plist[1].get_text()
+                data = ConfigWaypointFollower()
+                data.param_flag                 = int(plist[0].get_text())
+                data.velocity                   = float(plist[1].get_text())
+                data.lookahead_distance         = float(plist[2].get_text())
+                data.lookahead_ratio            = float(plist[3].get_text())
+                data.minimum_lookahead_distance = float(plist[4].get_text())
+                data.displacement_threshold     = float(plist[5].get_text())
+                data.relative_angle_threshold   = float(plist[6].get_text())
+                self.config_pub.onConfigWaypointFollower(data)
+                run_cmd = ('roslaunch waypoint_follower pure_pursuit.launch'
+                          + ' s_linear_interpolation:=' + plist[7].get_text() 
+                          + ' publishes_for_steering_robot:=' + plist[8].get_text())
                 node_sequence_list.append('/pure_pursuit')
             elif idx2 == 2: # mpc
-                run_cmd = ('roslaunch waypoint_follower mpc_follower.launch show_debug_info:=' + plist[0].get_text() +  ' publish_debug_values:=' + plist[1].get_text() 
-                          + ' vehicle_model_type:=' + plist[2].get_text() + ' qp_solver_type:=' + plist[3].get_text() + ' admisible_position_error:=' + plist[4].get_text() 
-                          + ' admisible_yaw_error_deg:=' + plist[5].get_text() + ' mpc_prediction_horizon:=' + plist[6].get_text() + ' mpc_prediction_sampling_time:=' + plist[7].get_text() 
-                          + ' mpc_weight_lat_error:=' + plist[8].get_text() + ' mpc_weight_terminal_lat_error:=' + plist[9].get_text() + ' mpc_weight_heading_error:=' + plist[10].get_text() 
-                          + ' mpc_weight_heading_error_squared_vel_coeff:=' + plist[11].get_text() + ' mpc_weight_terminal_heading_error:=' + plist[12].get_text() 
-                          + ' mpc_weight_lat_jerk:=' + plist[13].get_text() + ' mpc_weight_steering_input:=' + plist[14].get_text() 
+                run_cmd = ('roslaunch waypoint_follower mpc_follower.launch'
+                          + ' show_debug_info:=' + plist[0].get_text() 
+                          + ' publish_debug_values:=' + plist[1].get_text() 
+                          + ' vehicle_model_type:=' + plist[2].get_text() 
+                          + ' qp_solver_type:=' + plist[3].get_text() 
+                          + ' admisible_position_error:=' + plist[4].get_text() 
+                          + ' admisible_yaw_error_deg:=' + plist[5].get_text() 
+                          + ' mpc_prediction_horizon:=' + plist[6].get_text() 
+                          + ' mpc_prediction_sampling_time:=' + plist[7].get_text() 
+                          + ' mpc_weight_lat_error:=' + plist[8].get_text() 
+                          + ' mpc_weight_terminal_lat_error:=' + plist[9].get_text() 
+                          + ' mpc_weight_heading_error:=' + plist[10].get_text() 
+                          + ' mpc_weight_heading_error_squared_vel_coeff:=' + plist[11].get_text() 
+                          + ' mpc_weight_terminal_heading_error:=' + plist[12].get_text() 
+                          + ' mpc_weight_lat_jerk:=' + plist[13].get_text() 
+                          + ' mpc_weight_steering_input:=' + plist[14].get_text() 
                           + ' mpc_weight_steering_input_squared_vel_coeff:=' + plist[15].get_text() 
-                          + ' mpc_zero_ff_steer_deg:=' + plist[16].get_text() + ' enable_path_smoothing:=' + plist[17].get_text() + ' path_smoothing_times:=' + plist[18].get_text() 
-                          + ' path_filter_moving_ave_num:=' + plist[19].get_text() + ' curvature_smoothing_num:=' + plist[20].get_text() + ' steering_lpf_cutoff_hz:=' + plist[21].get_text() 
-                          + ' vehicle_model_steer_tau:=' + plist[22].get_text() + ' vehicle_model_wheelbase:=' + plist[23].get_text() + ' steer_lim_deg:=' + plist[24].get_text())
+                          + ' mpc_zero_ff_steer_deg:=' + plist[16].get_text() 
+                          + ' enable_path_smoothing:=' + plist[17].get_text() 
+                          + ' path_smoothing_times:=' + plist[18].get_text() 
+                          + ' path_filter_moving_ave_num:=' + plist[19].get_text() 
+                          + ' curvature_smoothing_num:=' + plist[20].get_text() 
+                          + ' steering_lpf_cutoff_hz:=' + plist[21].get_text() 
+                          + ' vehicle_model_steer_tau:=' + plist[22].get_text() 
+                          + ' vehicle_model_wheelbase:=' + plist[23].get_text() 
+                          + ' steer_lim_deg:=' + plist[24].get_text())
                 node_sequence_list.append('/mpc_follower /mpc_waypoints_converter')
             elif idx2 == 3: # hybride stenly
                 run_cmd = 'None'
                 node_sequence_list.append('/hybride_stenly')
         elif idx1 == 2: # Localizer
             if idx2 == 0: # ndt matching
-                run_cmd = ('roslaunch lidar_localizer ndt_matching.launch method_type:=' + plist[0].get_text() + ' use_odom:=' + plist[1].get_text() 
-                + ' use_imu:=' + plist[2].get_text() + ' imu_upside_down:=' + plist[3].get_text() + ' imu_topic:=' + plist[4].get_text() 
-                + ' get_height:=' + plist[5].get_text() + ' output_log_data:=' + plist[6].get_text())
+                data = ConfigNDT()
+                data.init_pos_gnss    = int(plist[0].get_text())
+                data.use_predict_pose = int(plist[1].get_text())
+                data.error_threshold  = float(plist[2].get_text())
+                data.resolution       = float(plist[3].get_text())
+                data.step_size        = float(plist[4].get_text())
+                data.trans_epsilon    = float(plist[5].get_text())
+                data.max_iterations   = int(plist[6].get_text())
+                self.config_pub.onConfigNdt(data)
+                run_cmd = ('roslaunch lidar_localizer ndt_matching.launch'
+                + ' method_type:=' + plist[7].get_text() 
+                + ' use_odom:=' + plist[8].get_text() 
+                + ' use_imu:=' + plist[9].get_text() 
+                + ' imu_upside_down:=' + plist[10].get_text() 
+                + ' imu_topic:=' + plist[11].get_text() 
+                + ' get_height:=' + plist[12].get_text() 
+                + ' output_log_data:=' + plist[13].get_text())
                 node_sequence_list.append('/ndt_matching')
             elif idx2 == 1: # ekf localizer
                 run_cmd = 'None'
                 node_sequence_list.append('/ekf_localizer')
         elif idx1 == 3: # Decision Maker
             if idx2 == 0: # decision maker
-                run_cmd = ('roslaunch decision_maker decision_maker.launch disuse_vector_map:=' + plist[0].get_text() + ' points_topic:=' + plist[1].get_text() 
-                          + ' baselink_tf:=' + plist[2].get_text() + ' use_fms:=' + plist[3].get_text() + ' auto_mission_reload:=' + plist[4].get_text() 
-                          + ' auto_engage:=' + plist[5].get_text() + ' auto_mission_change:=' + plist[6].get_text())
+                data = ConfigDecisionMaker()
+                data.auto_mission_reload    = bool(plist[0].get_text())
+                data.auto_engage            = bool(plist[1].get_text())
+                data.auto_mission_change    = bool(plist[2].get_text())
+                data.use_fms                = bool(plist[3].get_text())
+                data.disuse_vector_map      = bool(plist[4].get_text())
+                data.num_of_steer_behind    = int(plist[5].get_text())
+                data.change_threshold_dist  = float(plist[8].get_text())
+                data.change_threshold_angle = float(plist[9].get_text())
+                data.goal_threshold_dist    = float(plist[6].get_text())
+                data.goal_threshold_vel     = float(plist[7].get_text())
+                data.stopped_vel            = float(plist[10].get_text())
+                self.config_pub.onConfigDecisionMaker(data)
+                run_cmd = ('roslaunch decision_maker decision_maker.launch'
+                          + ' disuse_vector_map:=' + plist[4].get_text() 
+                          + ' points_topic:=' + plist[11].get_text() 
+                          + ' baselink_tf:=' + plist[12].get_text() 
+                          + ' use_fms:=' + plist[3].get_text() 
+                          + ' auto_mission_reload:=' + plist[0].get_text() 
+                          + ' auto_engage:=' + plist[1].get_text() 
+                          + ' auto_mission_change:=' + plist[2].get_text())
                 node_sequence_list.append('/decision_maker')
         elif idx1 == 4: # LaneChange Manager
             if idx2 == 0: # lanechange manager
@@ -1482,88 +1558,186 @@ class MyWindow(Gtk.ApplicationWindow):
                 node_sequence_list.append('/lanechange_manager')
         elif idx1 == 5: # Local Planner
             if idx2 == 0: # op commom params
-                run_cmd = ('roslaunch op_local_planner op_common_params.launch horizonDistance:=' + plist[0].get_text() + ' maxLocalPlanDistance:=' + plist[1].get_text() 
-                          + ' pathDensity:='+ plist[2].get_text() + ' rollOutDensity:=' + plist[3].get_text() + ' rollOutsNumber:=' + plist[4].get_text() + ' maxVelocity:=' + plist[5].get_text() 
-                          + ' maxAcceleration:=' + plist[6].get_text() + ' maxDeceleration:=' + plist[7].get_text() + ' enableFollowing:=' + plist[8].get_text() + ' enableSwerving:=' + plist[9].get_text() 
-                          + ' minFollowingDistance:=' + plist[10].get_text() + ' minDistanceToAvoid:=' + plist[11].get_text() + ' maxDistanceToAvoid:=' + plist[12].get_text() + ' enableStopSignBehavior:=' + plist[13].get_text() 
-                          + ' enableTrafficLightBehavior:=' + plist[14].get_text() + ' enableLaneChange:=' + plist[15].get_text() + ' horizontalSafetyDistance:=' + plist[16].get_text() 
-                          + ' verticalSafetyDistance:=' + plist[17].get_text() + ' velocitySource:=' + plist[18].get_text())
+                run_cmd = ('roslaunch op_local_planner op_common_params.launch horizonDistance:=' + plist[0].get_text() 
+                          + ' maxLocalPlanDistance:=' + plist[1].get_text() 
+                          + ' pathDensity:='+ plist[2].get_text() 
+                          + ' rollOutDensity:=' + plist[3].get_text() 
+                          + ' rollOutsNumber:=' + plist[4].get_text() 
+                          + ' maxVelocity:=' + plist[5].get_text() 
+                          + ' maxAcceleration:=' + plist[6].get_text() 
+                          + ' maxDeceleration:=' + plist[7].get_text() 
+                          + ' enableFollowing:=' + plist[8].get_text() 
+                          + ' enableSwerving:=' + plist[9].get_text() 
+                          + ' minFollowingDistance:=' + plist[10].get_text() 
+                          + ' minDistanceToAvoid:=' + plist[11].get_text() 
+                          + ' maxDistanceToAvoid:=' + plist[12].get_text() 
+                          + ' enableStopSignBehavior:=' + plist[13].get_text() 
+                          + ' enableTrafficLightBehavior:=' + plist[14].get_text() 
+                          + ' enableLaneChange:=' + plist[15].get_text() 
+                          + ' horizontalSafetyDistance:=' + plist[16].get_text() 
+                          + ' verticalSafetyDistance:=' + plist[17].get_text() 
+                          + ' velocitySource:=' + plist[18].get_text())
                 node_sequence_list.append('/op_common_params')
             elif idx2 == 1: # op trajectory generator
-                run_cmd = ('roslaunch op_local_planner op_trajectory_generator.launch samplingTipMargin:=' + plist[0].get_text() + ' samplingOutMargin:=' + plist[1].get_text())
+                run_cmd = ('roslaunch op_local_planner op_trajectory_generator.launch'
+                          + ' samplingTipMargin:=' + plist[0].get_text() 
+                          + ' samplingOutMargin:=' + plist[1].get_text())
                 node_sequence_list.append('/op_trajectory_generator')
             elif idx2 == 2: # op motion predictor
-                run_cmd = ('roslaunch op_local_planner op_motion_predictor.launch enableCurbObstacles:=' + plist[0].get_text() + ' enableGenrateBranches:=' + plist[1].get_text() 
-                          + ' max_distance_to_lane:=' + plist[2].get_text() + ' prediction_distance:=' + plist[3].get_text() 
-                          + ' enableStepByStepSignal:=' + plist[4].get_text() + ' enableParticleFilterPrediction:=' + plist[5].get_text())
+                run_cmd = ('roslaunch op_local_planner op_motion_predictor.launch enableCurbObstacles:=' + plist[0].get_text() 
+                          + ' enableGenrateBranches:=' + plist[1].get_text() 
+                          + ' max_distance_to_lane:=' + plist[2].get_text() 
+                          + ' prediction_distance:=' + plist[3].get_text() 
+                          + ' enableStepByStepSignal:=' + plist[4].get_text() 
+                          + ' enableParticleFilterPrediction:=' + plist[5].get_text())
                 node_sequence_list.append('/op_motion_predictor')
             elif idx2 == 3: # op trajectory evaluator
-                run_cmd = 'roslaunch op_local_planner op_trajectory_evaluator.launch enablePrediction:=' + plist[0].get_text()
+                run_cmd = ('roslaunch op_local_planner op_trajectory_evaluator.launch'
+                        + ' enablePrediction:=' + plist[0].get_text())
                 node_sequence_list.append('/op_trajectory_evaluator')
             elif idx2 == 4: # op behavior selector
                 run_cmd = 'roslaunch op_local_planner op_behavior_selector.launch'
                 node_sequence_list.append('/op_behavior_selector')
         elif idx1 == 6: # Vehicle Setting
             if idx2 == 0: # vel pose connect
-                run_cmd = 'roslaunch autoware_connector vel_pose_connect.launch topic_pose_stamped:=' + plist[0].get_text() + ' topic_twist_stamped:=' + plist[1].get_text() + ' sim_mode:=' + plist[2].get_text()
+                run_cmd = ('roslaunch autoware_connector vel_pose_connect.launch'
+                        + ' topic_pose_stamped:=' + plist[0].get_text() 
+                        + ' topic_twist_stamped:=' + plist[1].get_text() 
+                        + ' sim_mode:=' + plist[2].get_text())
                 node_sequence_list.append('/pose_relay /vel_relay')
             elif idx2 == 1: # baselink to localizer
-                run_cmd = ('roslaunch runtime_manager setup_tf.launch x:=' + plist[0].get_text() + ' y:=' + plist[1].get_text() + ' z:=' + plist[2].get_text() + ' yaw:=' + plist[3].get_text() 
-                          + ' pitch:=' + plist[4].get_text() + ' roll:=' + plist[5].get_text() + ' frame_id:=' + plist[6].get_text() + ' child_frame_id:=' + plist[7].get_text() + ' period_in_ms:=' + plist[8].get_text())
+                run_cmd = ('roslaunch runtime_manager setup_tf.launch'
+                          + ' x:=' + plist[0].get_text() 
+                          + ' y:=' + plist[1].get_text() 
+                          + ' z:=' + plist[2].get_text() 
+                          + ' yaw:=' + plist[3].get_text() 
+                          + ' pitch:=' + plist[4].get_text() 
+                          + ' roll:=' + plist[5].get_text() 
+                          + ' frame_id:=' + plist[6].get_text() 
+                          + ' child_frame_id:=' + plist[7].get_text() 
+                          + ' period_in_ms:=' + plist[8].get_text())
                 node_sequence_list.append('/base_link_to_localizer')
         
         if run_cmd == 'None':
             window.close()
         else:
-            u_thread = threading.Thread(target=self.excuteCore, args=(run_cmd,))
-            u_thread.daemon = True
-            u_thread.start()
+            self.onExcuteThread(run_cmd)
             inst_sequence_list.append(run_cmd)
             window.close()
 
     def onClickedExcute2(self, widget, idx1, idx2, plist, window):
-
-        window.close()
+        if idx1 == 0: # Map
+            if idx2 == 0: # point cloud
+                run_cmd = ('rosrun map_file points_map_loader noupdate '
+                          + plist[0].get_text())
+                node_sequence_list.append('/points_map_loader')
+            elif idx2 == 1: # vector map
+                run_cmd = ('rosrun map_file vector_map_loader '
+                          + plist[0].get_text())
+                node_sequence_list.append('/vector_map_loader')
+            elif idx2 == 2: # point vector tf
+                run_cmd = ('roslaunch '
+                            + plist[0].get_text())
+                node_sequence_list.append('/world_to_map')
+        #elif idx1 == 1: # Sensing
+            #if idx2 == 0: # sensor1
+            #elif idx2 == 1: # sensor2
+            #elif idx2 == 2: # sensor3
+            #elif idx2 == 3: # sensor4
+        elif idx1 == 2: # Point Downsampler
+            if idx2 == 0: # voxel grid filter
+                data = ConfigVoxelGridFilter()
+                data.voxel_leaf_size = float(plist[2].get_text())
+                data.measurement_range = float(plist[3].get_text())
+                self.config_pub.onConfigVoxelGridFilter(data)
+                run_cmd = ('roslaunch points_downsampler points_downsample.launch'
+                          + ' node_name:=' + plist[0].get_text()
+                          + ' points_topic:=' + plist[1].get_text())
+                node_sequence_list.append('/voxel_grid_filter')
+        elif idx1 == 3: # quick start
+            if idx2 == 0: # map quick start
+                run_cmd = 'None'
+                self.mapQuickStart()
+            elif idx2 == 1: # sensing quick start
+                run_cmd = 'None'
+                self.sensingQuickStart()
+        if run_cmd == 'None':
+            window.close()
+        else:
+            self.onExcuteThread(run_cmd)
+            inst_sequence_list.append(run_cmd)
+            window.close()
 
     def killNode(self, inst, idx1, idx2): # set free state of seleted node
-        if inst == 1:
+        if inst == 1 and kill_instruction[idx1][idx2] in node_sequence_list:
             os.system("rosnode kill " + kill_instruction[idx1][idx2])
             del_idx = node_sequence_list.index(kill_instruction[idx1][idx2])
-        elif inst == 2:
+            del node_sequence_list[del_idx]
+            del inst_sequence_list[del_idx]
+        elif inst == 2 and kill_instruction2[idx1][idx2] in node_sequence_list:
             os.system("rosnode kill " + kill_instruction2[idx1][idx2])
             del_idx = node_sequence_list.index(kill_instruction2[idx1][idx2])
+            del node_sequence_list[del_idx]
+            del inst_sequence_list[del_idx]
+    
+    def mapQuickStart(self):
+        dir_path = getDirPath()
+        path = dir_path + 'map_quickstart.yaml'
+        print('loading... ' + path)
+        f = open(path, 'r')
+        d = yaml.load(f)
+        f.close()
+        quick_list = d.get('routine', [])
         
-        del node_sequence_list[del_idx]
-        del inst_sequence_list[del_idx]
-       
+        for inst in quick_list:
+            cmd = inst['instruction']
+            for par in  inst['parameters']:
+                cmd = cmd + ' ' + par['args']
+            print(cmd)
+
+    def sensingQuickStart(self):
+        dir_path = getDirPath()
+        path = dir_path + 'sensing_quickstart.yaml'
+        print('loading ' + path)
+        f = open(path, 'r')
+        d = yaml.load(f)
+        f.close()
+        quick_list = d.get('routine', [])
+        
+        for inst in quick_list:
+            cmd = inst['instruction']
+            for par in  inst['parameters']:
+                cmd = cmd + ' ' + par['args']
+            print(cmd)
+
     def doSystemExit(self): # if system has estop state, it save all nodes info before kill all nodes
         print("\nEXIT MANAGER! Killing all nodes .. ... ..")
         for i in range(len(node_sequence_list)):
             os.system("rosnode kill " + node_sequence_list[i])
         print("EXIT routine... Done")
 
-#    def system_estop(self): # if system has estop state, it save all nodes info before kill all nodes
-#        print("E-STOP!! Killing all nodes .. ... ..")
-#        for i in range(len(node_sequence_list)):
-#            os.system("rosnode kill " + node_sequence_list[i])
-#        print("E-stop routine... Done")
-#        estop_state = True
-#
-#    def rerun_routine(self): # do rerun routine, using saved all nodes info
-#        if estop_state == False:
-#            return
-#
-#        print("Do rerun routine")
-#        print("----------- rerun node list -----------")
-#        for i in range(len(node_sequence_list)):
-#            print(node_sequence_list[i])
-#        print("---------------------------------------")
-#
-#        for i in range(len(inst_sequence_list)):
-#            time.sleep(1)
-#            os.system(inst_sequence_list[i])
-#
-#        estop_state = False
+    def doSystemEstop(self): # if system has estop state, it save all nodes info before kill all nodes
+        print("\nE-STOP!! Killing all nodes .. ... ..")
+        for i in range(len(node_sequence_list)):
+            os.system("rosnode kill " + node_sequence_list[i])
+        print("E-stop routine... Done")
+        estop_state = True
+
+    def doRerunRoutine(self): # do rerun routine, using saved all nodes info
+        if estop_state == False:
+            return
+
+        print("\nDo rerun routine")
+        print("----------- rerun node list -----------")
+        for i in range(len(node_sequence_list)):
+            print(node_sequence_list[i])
+        print("---------------------------------------")
+
+        for i in range(len(inst_sequence_list)):
+            time.sleep(1)
+            self.onExcuteThread(inst_sequence_list[i])
+
+        estop_state = False
 
         # callback function for the signal emitted by the cellrenderertoggle
     def onToggled(self, widget, path):

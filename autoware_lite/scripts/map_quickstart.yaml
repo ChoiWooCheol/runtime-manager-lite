@@ -1,0 +1,27 @@
+nodelist: []
+routine:
+  -
+    instruction: rosrun map_file points_map_loader
+    parameters:
+      -
+        args: noupdate
+      -
+        args: /home/choi/Desktop/multi_dtlane_kcity_real/pcdmap/filtering_2f.pcd
+  -
+    instruction: rosrun map_file vector_map_loader
+    parameters:
+      -
+        args: /home/choi/Desktop/multi_dtlane_kcity_real/vectormap/dtlane.csv
+      -
+        args: /home/choi/Desktop/multi_dtlane_kcity_real/vectormap/idx.csv
+      -
+        args: /home/choi/Desktop/multi_dtlane_kcity_real/vectormap/lane.csv
+      -
+        args: /home/choi/Desktop/multi_dtlane_kcity_real/vectormap/node.csv
+      -
+        args: /home/choi/Desktop/multi_dtlane_kcity_real/vectormap/point.csv
+  -
+    instruction: roslaunch
+    parameters:
+      -
+        args: /home/choi/Desktop/moriyamaBAG/data/tf/tf.launch
