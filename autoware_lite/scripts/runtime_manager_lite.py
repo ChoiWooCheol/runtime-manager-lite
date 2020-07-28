@@ -80,6 +80,15 @@ estop_state = False
 def getDirPath():
 	return os.path.abspath(os.path.dirname(__file__)) + "/"
 
+def load_yaml(filename):
+    dir_path = getDirPath()
+    path = dir_path + filename
+    print('loading... ' + path)
+    f = open(path, 'r')
+    d = yaml.load(f)
+    f.close()
+    return d
+
 class AutowareConfigPublisher:
     def __init__(self):
         self.pub_twist_filter       = rospy.Publisher('/config/twist_filter', ConfigTwistFilter, latch=True, queue_size=10)
@@ -87,6 +96,67 @@ class AutowareConfigPublisher:
         self.pub_ndt                = rospy.Publisher('/config/ndt', ConfigNDT, latch=True, queue_size=10)
         self.pub_decision_maker     = rospy.Publisher('/config/decision_maker', ConfigDecisionMaker, latch=True, queue_size=10)
         self.pub_voxel_grid_filter  = rospy.Publisher('/config/voxel_grid_filter', ConfigVoxelGridFilter, latch=True, queue_size=10)
+        
+        self.setDefaultConfigParam()
+
+    def setDefaultConfigParam(self):
+        d = load_yaml('default_param.yaml')
+        conf = d.get('config', [])
+
+        par = conf[0]
+        val = par['conf_twist_filter']
+        data = ConfigTwistFilter()
+        data.lateral_accel_limit    = float(val[0]['lateral_accel_limit'])
+        data.lowpass_gain_linear_x  = float(val[1]['lowpass_gain_linear_x'])
+        data.lowpass_gain_angular_z = float(val[2]['lowpass_gain_angular_z'])
+        self.onConfigTwistFilter(data)
+
+        par = conf[1]
+        val = par['conf_waypoint_follower']
+        data = ConfigWaypointFollower()
+        data.param_flag                 = int(val[0]['param_flag'])
+        data.velocity                   = float(val[1]['velocity'])
+        data.lookahead_distance         = float(val[2]['lookahead_distance'])
+        data.lookahead_ratio            = float(val[3]['lookahead_ratio'])
+        data.minimum_lookahead_distance = float(val[4]['minimum_lookahead_distance'])
+        data.displacement_threshold     = float(val[5]['displacement_threshold'])
+        data.relative_angle_threshold   = float(val[6]['relative_angle_threshold'])
+        self.onConfigWaypointFollower(data)
+        
+        par = conf[2]
+        val = par['conf_ndt']
+        data = ConfigNDT()
+        data.init_pos_gnss    = int(val[0]['init_pos_gnss'])
+        data.use_predict_pose = int(val[1]['use_predict_pose'])
+        data.error_threshold  = float(val[2]['error_threshold'])
+        data.resolution       = float(val[3]['resolution'])
+        data.step_size        = float(val[4]['step_size'])
+        data.trans_epsilon    = float(val[5]['trans_epsilon'])
+        data.max_iterations   = int(val[6]['max_iterations'])
+        self.onConfigNdt(data)
+
+        par = conf[3]
+        val = par['conf_decision_maker']
+        data = ConfigDecisionMaker()
+        data.auto_mission_reload    = bool(val[0]['auto_mission_reload'])
+        data.auto_engage            = bool(val[1]['auto_engage'])
+        data.auto_mission_change    = bool(val[2]['auto_mission_change'])
+        data.use_fms                = bool(val[3]['use_fms'])
+        data.disuse_vector_map      = bool(val[4]['disuse_vector_map'])
+        data.num_of_steer_behind    = int(val[5]['num_of_steer_behind'])
+        data.change_threshold_dist  = float(val[6]['change_threshold_dist'])
+        data.change_threshold_angle = float(val[7]['change_threshold_angle'])
+        data.goal_threshold_dist    = float(val[8]['goal_threshold_dist'])
+        data.goal_threshold_vel     = float(val[9]['goal_threshold_vel'])
+        data.stopped_vel            = float(val[10]['stopped_vel'])
+        self.onConfigDecisionMaker(data)
+
+        par = conf[4]
+        val = par['conf_voxel_grid_filter']
+        data = ConfigVoxelGridFilter()
+        data.voxel_leaf_size = float(val[0]['voxel_leaf_size'])
+        data.measurement_range = float(val[1]['measurement_range'])
+        self.onConfigVoxelGridFilter(data)
 
     def onConfigTwistFilter(self, data): # twist filter
         self.pub_twist_filter.publish(data)
@@ -678,31 +748,33 @@ class MyWindow(Gtk.ApplicationWindow):
             exec_button, set_param_box, Gtk.PositionType.BOTTOM, 1, 1
         )
         set_param_box.pack_start(in_grid, True, True, 0)
-        
+
+        d = load_yaml('default_param.yaml')
+        conf = d.get('launch_param', [])
+        conf2 = d.get('config', [])
         param_list = []
         if idx1 == 0: # Detection
             if idx2 == 0: # lidar detector
+                
                 param1 = Gtk.Label('detect_range (25, 50)')
                 param2 = Gtk.Label('segmentation rate')
-                param3 = Gtk.Label('12345678')
 
                 pv1 = Gtk.Entry()
                 pv2 = Gtk.Entry()
-                pv3 = Gtk.Entry()
-                
+
+                par = conf[0]
+                val = par['lidar_detector']
+
                 #default values
-                pv1.set_text('25')
-                pv2.set_text('100')
-                pv3.set_text('222')
+                pv1.set_text(str(val[0]['detect_range']))
+                pv2.set_text(str(val[1]['segmentation_rate']))
                 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
                 in_grid.attach_next_to(pv2, pv1, Gtk.PositionType.BOTTOM, 1, 1)
-                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
-                in_grid.attach_next_to(pv3, pv2, Gtk.PositionType.BOTTOM, 1, 1)
 
-                param_list = [pv1,pv2,pv3]
+                param_list = [pv1,pv2]
 #            elif idx2 == 1: # camera detector
 #            elif idx2 == 2: # lidar kf contour track
 #            elif idx2 == 3: # lidar camera fusion
@@ -715,11 +787,14 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv1 = Gtk.Entry()
                 pv2 = Gtk.Entry()
                 pv3 = Gtk.Entry()
+                
+                par = conf2[0]
+                val = par['conf_twist_filter']
 
                 #default values
-                pv1.set_text('0.8')
-                pv2.set_text('0')
-                pv3.set_text('0')
+                pv1.set_text(str(val[0]['lateral_accel_limit']))
+                pv2.set_text(str(val[1]['lowpass_gain_linear_x']))
+                pv3.set_text(str(val[2]['lowpass_gain_angular_z']))
                 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
@@ -749,16 +824,21 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv8 = Gtk.Entry()
                 pv9 = Gtk.Entry()
 
+                lpar = conf[5]
+                lval = lpar['pure_pursuit']
+                cpar = conf2[1]
+                cval = cpar['conf_waypoint_follower']
+
                 #default values
-                pv1.set_text('0')
-                pv2.set_text('5')
-                pv3.set_text('4')
-                pv4.set_text('2')
-                pv5.set_text('4')
-                pv6.set_text('0')
-                pv7.set_text('0')
-                pv8.set_text('False')
-                pv9.set_text('True')
+                pv1.set_text(str(cval[0]['param_flag']))
+                pv2.set_text(str(cval[1]['velocity']))
+                pv3.set_text(str(cval[2]['lookahead_distance']))
+                pv4.set_text(str(cval[3]['lookahead_ratio']))
+                pv5.set_text(str(cval[4]['minimum_lookahead_distance']))
+                pv6.set_text(str(cval[5]['displacement_threshold']))
+                pv7.set_text(str(cval[6]['relative_angle_threshold']))
+                pv8.set_text(str(lval[0]['linear_interpolation']))
+                pv9.set_text(str(lval[1]['publishs_topic_for_steering_robot']))
 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
@@ -835,33 +915,36 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv25 = Gtk.Entry()
                 pv26 = Gtk.Entry()
 
+                par = conf[6]
+                val = par['mpc']
+
                 #default values
-                pv1.set_text('False') # show_debug_info
-                pv2.set_text('False') # publish_debug_values
-                pv3.set_text('kinematics') # vehicle_model_type
-                pv4.set_text('unconstraint_fast') # qp_solver_type
-                pv5.set_text('0.03') # ctrl_period
-                pv6.set_text('5') # admisible_position_error
-                pv7.set_text('90') # admisible_yaw_error_deg
-                pv8.set_text('70') # mpc_prediction_horizon
-                pv9.set_text('0.1') # mpc_prediction_sampling_time
-                pv10.set_text('0.1') # mpc_weight_lat_error
-                pv11.set_text('10') # mpc_weight_terminal_lat_error
-                pv12.set_text('0') # mpc_weight_heading_error
-                pv13.set_text('0.3') #  mpc_weight_heading_error_squared_vel_coeff
-                pv14.set_text('0.1') # mpc_weight_terminal_heading_error
-                pv15.set_text('0') # mpc_weight_lat_jerk
-                pv16.set_text('1') # mpc_weight_steering_input 
-                pv17.set_text('0.25') # mpc_weight_steering_input_squared_vel_coeff 
-                pv18.set_text('2') # mpc_zero_ff_steer_deg
-                pv19.set_text('True') # enable_path_smoothing
-                pv20.set_text('1') # path_smoothing_times 
-                pv21.set_text('35') # path_filter_moving_ave_num 
-                pv22.set_text('35') #curvature_smoothing_num 
-                pv23.set_text('3') #  steering_lpf_cutoff_hz 
-                pv24.set_text('0.3') #  vehicle_model_steer_tau 
-                pv25.set_text('2.9') # vehicle_model_wheelbase
-                pv26.set_text('35') # steer_lim_deg
+                pv1.set_text(str(val[0]['show_debug_info'])) # show_debug_info
+                pv2.set_text(str(val[1]['publish_debug_values'])) # publish_debug_values
+                pv3.set_text(str(val[2]['vehicle_model_type'])) # vehicle_model_type
+                pv4.set_text(str(val[3]['qp_solver_type'])) # qp_solver_type
+                pv5.set_text(str(val[4]['ctrl_period'])) # ctrl_period
+                pv6.set_text(str(val[5]['admisible_position_error'])) # admisible_position_error
+                pv7.set_text(str(val[6]['admisible_yaw_error_deg'])) # admisible_yaw_error_deg
+                pv8.set_text(str(val[7]['mpc_prediction_horizon'])) # mpc_prediction_horizon
+                pv9.set_text(str(val[8]['mpc_prediction_sampling_time'])) # mpc_prediction_sampling_time
+                pv10.set_text(str(val[9]['mpc_weight_lat_error'])) # mpc_weight_lat_error
+                pv11.set_text(str(val[10]['mpc_weight_terminal_lat_error'])) # mpc_weight_terminal_lat_error
+                pv12.set_text(str(val[11]['mpc_weight_heading_error'])) # mpc_weight_heading_error
+                pv13.set_text(str(val[12]['mpc_weight_heading_error_squared_vel_coeff'])) #  mpc_weight_heading_error_squared_vel_coeff
+                pv14.set_text(str(val[13]['mpc_weight_terminal_heading_error'])) # mpc_weight_terminal_heading_error
+                pv15.set_text(str(val[14]['mpc_weight_lat_jerk'])) # mpc_weight_lat_jerk
+                pv16.set_text(str(val[15]['mpc_weight_steering_input'])) # mpc_weight_steering_input 
+                pv17.set_text(str(val[16]['mpc_weight_steering_input_squared_vel_coeff'])) # mpc_weight_steering_input_squared_vel_coeff 
+                pv18.set_text(str(val[17]['mpc_zero_ff_steer_deg'])) # mpc_zero_ff_steer_deg
+                pv19.set_text(str(val[18]['enable_path_smoothing'])) # enable_path_smoothing
+                pv20.set_text(str(val[19]['path_smoothing_times'])) # path_smoothing_times 
+                pv21.set_text(str(val[20]['path_filter_moving_ave_num'])) # path_filter_moving_ave_num 
+                pv22.set_text(str(val[21]['curvature_smoothing_num'])) #curvature_smoothing_num 
+                pv23.set_text(str(val[22]['steering_lpf_cutoff_hz'])) #  steering_lpf_cutoff_hz 
+                pv24.set_text(str(val[23]['vehicle_model_steer_tau'])) #  vehicle_model_steer_tau 
+                pv25.set_text(str(val[24]['vehicle_model_wheelbase'])) # vehicle_model_wheelbase
+                pv26.set_text(str(val[25]['steer_lim_deg'])) # steer_lim_deg
 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
@@ -954,21 +1037,27 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv13 = Gtk.Entry()
                 pv14 = Gtk.Entry()
 
+                lpar = conf[7]
+                lval = lpar['ndt']
+                cpar = conf2[2]
+                cval = cpar['conf_ndt']
+
                 #default values
-                pv1.set_text('1') # init_pos_gnss
-                pv2.set_text('0') # use_predict_pose
-                pv3.set_text('1') # error_threshold
-                pv4.set_text('1') # resolution
-                pv5.set_text('0.1') # step_size
-                pv6.set_text('0.01') # trans_epsilon
-                pv7.set_text('30') # max_iterations
-                pv8.set_text('0') # method_type
-                pv9.set_text('False') # use_odom
-                pv10.set_text('False') # use_imu
-                pv11.set_text('False') # imu_upside_down
-                pv12.set_text('/imu_raw') # imu_topic
-                pv13.set_text('False') # get_height
-                pv14.set_text('False') # output_log_data
+                pv1.set_text(str(cval[0]['init_pos_gnss'])) # init_pos_gnss
+                pv2.set_text(str(cval[1]['use_predict_pose'])) # use_predict_pose
+                pv3.set_text(str(cval[2]['error_threshold'])) # error_threshold
+                pv4.set_text(str(cval[3]['resolution'])) # resolution
+                pv5.set_text(str(cval[4]['step_size'])) # step_size
+                pv6.set_text(str(cval[5]['trans_epsilon'])) # trans_epsilon
+                pv7.set_text(str(cval[6]['max_iterations'])) # max_iterations
+
+                pv8.set_text(str(lval[0]['method_type'])) # method_type
+                pv9.set_text(str(lval[1]['use_odom'])) # use_odom
+                pv10.set_text(str(lval[2]['use_imu'])) # use_imu
+                pv11.set_text(str(lval[3]['imu_upside_down'])) # imu_upside_down
+                pv12.set_text(str(lval[4]['imu_topic'])) # imu_topic
+                pv13.set_text(str(lval[5]['get_height'])) # get_height
+                pv14.set_text(str(lval[6]['output_log_data'])) # output_log_data
 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
@@ -1033,20 +1122,25 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv12 = Gtk.Entry()
                 pv13 = Gtk.Entry()
 
+                lpar = conf[8]
+                lval = lpar['decision_maker']
+                cpar = conf2[3]
+                cval = cpar['conf_decision_maker']
+
                 #default values
-                pv1.set_text('False') # auto_mission_reload
-                pv2.set_text('False') # auto_engage
-                pv3.set_text('False') # auto_mission_change
-                pv4.set_text('False') # use_fms
-                pv5.set_text('True') # disuse_vector_map
-                pv6.set_text('20') # num_of_steer_behind
-                pv7.set_text('3') # goal_threshold_dist
-                pv8.set_text('0.1') # goal_threshold_vel
-                pv9.set_text('1') # change_threshold_dist
-                pv10.set_text('15') # change_threshold_angle
-                pv11.set_text('0.1') # stopped_vel
-                pv12.set_text('/points_lanes') # points_topic
-                pv13.set_text('base_link') # baselink_tf
+                pv1.set_text(str(cval[0]['auto_mission_reload'])) # auto_mission_reload
+                pv2.set_text(str(cval[1]['auto_engage'])) # auto_engage
+                pv3.set_text(str(cval[2]['auto_mission_change'])) # auto_mission_change
+                pv4.set_text(str(cval[3]['use_fms'])) # use_fms
+                pv5.set_text(str(cval[4]['disuse_vector_map'])) # disuse_vector_map
+                pv6.set_text(str(cval[5]['num_of_steer_behind'])) # num_of_steer_behind
+                pv7.set_text(str(cval[8]['goal_threshold_dist'])) # goal_threshold_dist
+                pv8.set_text(str(cval[9]['goal_threshold_vel'])) # goal_threshold_vel
+                pv9.set_text(str(cval[6]['change_threshold_dist'])) # change_threshold_dist
+                pv10.set_text(str(cval[7]['change_threshold_angle'])) # change_threshold_angle
+                pv11.set_text(str(cval[10]['stopped_vel'])) # stopped_vel
+                pv12.set_text(str(lval[0]['points_topic'])) # points_topic
+                pv13.set_text(str(lval[1]['baselink_tf'])) # baselink_tf
 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
@@ -1089,7 +1183,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 param6 = Gtk.Label('maxVelocity (-1.0 ~ 20.0)')
                 param7 = Gtk.Label('maxAcceleration (0.01 ~ 25.0)')
                 param8 = Gtk.Label('maxDeceleration (-25.0 ~ -0.01)')
-                param9 = Gtk.Label('enableFollowing)')
+                param9 = Gtk.Label('enableFollowing')
                 param10 = Gtk.Label('enableSwerving')
                 param11 = Gtk.Label('minFollowingDistance (0.5 ~ 100.0)')
                 param12 = Gtk.Label('minDistanceToAvoid (0.1 ~ 80.0)')
@@ -1097,8 +1191,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 param14 = Gtk.Label('enableStopSignBehavior')
                 param15 = Gtk.Label('enableTrafficLightBehavior')
                 param16 = Gtk.Label('enableLaneChange')
-                param17 = Gtk.Label('horizontalSafetyDistance (0.0 ~ 10.0')
-                param18 = Gtk.Label('verticalSafetyDistance (0.0 ~ 25.0')
+                param17 = Gtk.Label('horizontalSafetyDistance (0.0 ~ 10.0)')
+                param18 = Gtk.Label('verticalSafetyDistance (0.0 ~ 25.0)')
                 param19 = Gtk.Label('velocitySource (Odometry : 0, Autoware : 1, Car Info : 2)')
 
                 pv1 = Gtk.Entry()
@@ -1121,26 +1215,28 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv18 = Gtk.Entry()
                 pv19 = Gtk.Entry()
 
+                par = conf[9]
+                val = par['op_common_params']
                 #default values
-                pv1.set_text('120') # horizonDistance
-                pv2.set_text('60') # maxLocalPlanDistance
-                pv3.set_text('0.5') # pathDensity
-                pv4.set_text('0.5') # rollOutDensity
-                pv5.set_text('4') # rollOutsNumber
-                pv6.set_text('15') # maxVelocity
-                pv7.set_text('5') # maxAcceleration
-                pv8.set_text('-3') # maxDeceleration
-                pv9.set_text('True') # enableFollowing
-                pv10.set_text('True') # enableSwerving
-                pv11.set_text('30') # minFollowingDistance
-                pv12.set_text('15') # minDistanceToAvoid
-                pv13.set_text('4') # maxDistanceToAvoid
-                pv14.set_text('True') # enableStopSignBehavior
-                pv15.set_text('False') # enableTrafficLightBehavior
-                pv16.set_text('False') # enableLaneChange 
-                pv17.set_text('0.5') # horizontalSafetyDistance 
-                pv18.set_text('0.5') # verticalSafetyDistance
-                pv19.set_text('1') # velocitySource
+                pv1.set_text(str(val[0]['horizonDistance'])) # horizonDistance
+                pv2.set_text(str(val[1]['maxLocalPlanDistance'])) # maxLocalPlanDistance
+                pv3.set_text(str(val[2]['pathDensity'])) # pathDensity
+                pv4.set_text(str(val[3]['rollOutDensity'])) # rollOutDensity
+                pv5.set_text(str(val[4]['rollOutsNumber'])) # rollOutsNumber
+                pv6.set_text(str(val[5]['maxVelocity'])) # maxVelocity
+                pv7.set_text(str(val[6]['maxAcceleration'])) # maxAcceleration
+                pv8.set_text(str(val[7]['maxDeceleration'])) # maxDeceleration
+                pv9.set_text(str(val[8]['enableFollowing'])) # enableFollowing
+                pv10.set_text(str(val[9]['enableSwerving'])) # enableSwerving
+                pv11.set_text(str(val[10]['minFollowingDistance'])) # minFollowingDistance
+                pv12.set_text(str(val[11]['minDistanceToAvoid'])) # minDistanceToAvoid
+                pv13.set_text(str(val[12]['maxDistanceToAvoid'])) # maxDistanceToAvoid
+                pv14.set_text(str(val[13]['enableStopSignBehavior'])) # enableStopSignBehavior
+                pv15.set_text(str(val[14]['enableTrafficLightBehavior'])) # enableTrafficLightBehavior
+                pv16.set_text(str(val[15]['enableLaneChange'])) # enableLaneChange 
+                pv17.set_text(str(val[16]['horizontalSafetyDistance'])) # horizontalSafetyDistance 
+                pv18.set_text(str(val[17]['verticalSafetyDistance'])) # verticalSafetyDistance
+                pv19.set_text(str(val[18]['velocitySource'])) # velocitySource
 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
@@ -1189,8 +1285,11 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv1 = Gtk.Entry()
                 pv2 = Gtk.Entry()
 
-                pv1.set_text('10') # samplingTipMargin
-                pv2.set_text('15') # samplingOutMargin
+                par = conf[10]
+                val = par['op_trajectory_generator']
+
+                pv1.set_text(str(val[0]['samplingTipMargin'])) # samplingTipMargin
+                pv2.set_text(str(val[1]['samplingOutMargin'])) # samplingOutMargin
 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
@@ -1214,13 +1313,16 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv5 = Gtk.Entry()
                 pv6 = Gtk.Entry()
 
+                par = conf[11]
+                val = par['op_motion_predictor']
+
                 #default values
-                pv1.set_text('True') # enableCurbObstacles
-                pv2.set_text('False') # enableGenrateBranches
-                pv3.set_text('2') # max_distance_to_lane
-                pv4.set_text('25') # prediction_distance
-                pv5.set_text('False') # enableStepByStepSignal
-                pv6.set_text('False') # enableParticleFilterPrediction
+                pv1.set_text(str(val[0]['enableCurbObstacles'])) # enableCurbObstacles
+                pv2.set_text(str(val[1]['enableGenrateBranches'])) # enableGenrateBranches
+                pv3.set_text(str(val[2]['max_distance_to_lane'])) # max_distance_to_lane
+                pv4.set_text(str(val[3]['prediction_distance'])) # prediction_distance
+                pv5.set_text(str(val[4]['enableStepByStepSignal'])) # enableStepByStepSignal
+                pv6.set_text(str(val[5]['enableParticleFilterPrediction'])) # enableParticleFilterPrediction
 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
@@ -1239,7 +1341,9 @@ class MyWindow(Gtk.ApplicationWindow):
             elif idx2 == 3: # op trajectory evaluator
                 param1 = Gtk.Label('enablePrediction')
                 pv1 = Gtk.Entry()
-                pv1.set_text('True') # enablePrediction
+                par = conf[12]
+                val = par['op_trajectory_evaluator']
+                pv1.set_text(str(val[0]['enablePrediction'])) # enablePrediction
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
                 param_list = [pv1]
@@ -1255,9 +1359,12 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv2 = Gtk.Entry()
                 pv3 = Gtk.Entry()
 
-                pv1.set_text('/ndt_pose') # samplingTipMargin
-                pv2.set_text('/estimate_twist') # samplingOutMargin
-                pv3.set_text('True') # max_distance_to_lane
+                par = conf[13]
+                val = par['vel_pose_connect']
+
+                pv1.set_text(str(val[0]['topic_pose_stamped'])) # topic_pose_stamped
+                pv2.set_text(str(val[1]['topic_twist_stamped'])) # topic_twist_stamped
+                pv3.set_text(str(val[2]['sim_mode'])) # sim_mode
 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
@@ -1289,16 +1396,19 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv8 = Gtk.Entry()
                 pv9 = Gtk.Entry()
 
+                par = conf[14]
+                val = par['baselink_to_localizer']
+
                 #default values
-                pv1.set_text('1.2') # x
-                pv2.set_text('0') # y
-                pv3.set_text('2') # z
-                pv4.set_text('0') # yaw
-                pv5.set_text('0') # pitch
-                pv6.set_text('0') # roll
-                pv7.set_text('/base_link') # frame_id
-                pv8.set_text('/velodyne') # child_frame_id
-                pv9.set_text('10') # period_in_ms
+                pv1.set_text(str(val[0]['x'])) # x
+                pv2.set_text(str(val[1]['y'])) # y
+                pv3.set_text(str(val[2]['z'])) # z
+                pv4.set_text(str(val[3]['yaw'])) # yaw
+                pv5.set_text(str(val[4]['pitch'])) # pitch
+                pv6.set_text(str(val[5]['roll'])) # roll
+                pv7.set_text(str(val[6]['frame_id'])) # frame_id
+                pv8.set_text(str(val[7]['child_frame_id'])) # child_frame_id
+                pv9.set_text(str(val[8]['period_in_ms'])) # period_in_ms
 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
@@ -1349,6 +1459,10 @@ class MyWindow(Gtk.ApplicationWindow):
         in_grid.set_row_homogeneous(True)
         exec_button = Gtk.Button.new_with_label("Execute")
         
+        d = load_yaml('default_param.yaml')
+        conf = d.get('launch_param', [])
+        conf2 = d.get('config', [])
+
         grid.attach_next_to(
             exec_button, set_param_box, Gtk.PositionType.BOTTOM, 1, 1
         )
@@ -1358,24 +1472,30 @@ class MyWindow(Gtk.ApplicationWindow):
             if idx2 == 0: # point cloud
                 param1 = Gtk.Label('PCD MAP path')
                 pv1 = Gtk.Entry()
+                par = conf[15]
+                val = par['point_cloud_loader']
                 #default values
-                pv1.set_text('path')
+                pv1.set_text(str(val[0]['path']))
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
                 param_list = [pv1]
             elif idx2 == 1: # vector map
                 param1 = Gtk.Label('Vector MAP path ( path1 path2 path3 ... )')
                 pv1 = Gtk.Entry()
+                par = conf[16]
+                val = par['vector_map_loader']
                 #default values
-                pv1.set_text('path1 path2 path3 ...')
+                pv1.set_text(str(val[0]['path']))
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
                 param_list = [pv1]
             elif idx2 == 2: # point vector tf
                 param1 = Gtk.Label('tf launch path')
                 pv1 = Gtk.Entry()
+                par = conf[17]
+                val = par['point_vector_tf']
                 #default values
-                pv1.set_text('path')
+                pv1.set_text(str(val[0]['path']))
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
                 param_list = [pv1]
@@ -1398,10 +1518,15 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv3 = Gtk.Entry()
                 pv4 = Gtk.Entry()
 
-                pv1.set_text('voxel_grid_filter') # node_name
-                pv2.set_text('/points_raw') # points_topic
-                pv3.set_text('2') # voxel_leaf_size
-                pv4.set_text('200') # measurement_range
+                lpar = conf[18]
+                lval = lpar['voxel_grid_filter']
+                cpar = conf2[4]
+                cval = cpar['conf_voxel_grid_filter']
+
+                pv1.set_text(str(lval[0]['node_name'])) # node_name
+                pv2.set_text(str(lval[1]['points_topic'])) # points_topic
+                pv3.set_text(str(cval[0]['voxel_leaf_size'])) # voxel_leaf_size
+                pv4.set_text(str(cval[1]['measurement_range'])) # measurement_range
 
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
@@ -1460,7 +1585,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.config_pub.onConfigTwistFilter(data)
                 run_cmd = 'roslaunch waypoint_follower twist_filter.launch'
                 node_sequence_list.append('/twist_filter /twist_gate')
-            elif idx2 == 1: # pure pursuit /config/waypoint_follwer
+            elif idx2 == 1: # pure pursuit /config/waypoint_follower
                 data = ConfigWaypointFollower()
                 data.param_flag                 = int(plist[0].get_text())
                 data.velocity                   = float(plist[1].get_text())
@@ -1681,12 +1806,7 @@ class MyWindow(Gtk.ApplicationWindow):
             del inst_sequence_list[del_idx]
     
     def mapQuickStart(self):
-        dir_path = getDirPath()
-        path = dir_path + 'map_quickstart.yaml'
-        print('loading... ' + path)
-        f = open(path, 'r')
-        d = yaml.load(f)
-        f.close()
+        d = load_yaml('map_quickstart.yaml')
         quick_list = d.get('routine', [])
         
         for inst in quick_list:
@@ -1696,14 +1816,9 @@ class MyWindow(Gtk.ApplicationWindow):
             print(cmd)
 
     def sensingQuickStart(self):
-        dir_path = getDirPath()
-        path = dir_path + 'sensing_quickstart.yaml'
-        print('loading ' + path)
-        f = open(path, 'r')
-        d = yaml.load(f)
-        f.close()
+        d = load_yaml('sensing_quickstart.yaml')
         quick_list = d.get('routine', [])
-        
+
         for inst in quick_list:
             cmd = inst['instruction']
             for par in  inst['parameters']:

@@ -1,0 +1,141 @@
+config:
+  - conf_twist_filter:
+    - lateral_accel_limit: 0.8
+    - lowpass_gain_linear_x: 0
+    - lowpass_gain_angular_z: 0
+  - conf_waypoint_follower:
+    - param_flag: 0
+    - velocity: 5.0
+    - lookahead_distance: 4.0
+    - lookahead_ratio: 2.0
+    - minimum_lookahead_distance: 4.0
+    - displacement_threshold: 0.0
+    - relative_angle_threshold: 0.0
+  - conf_ndt:
+    - init_pos_gnss: 1
+    - use_predict_pose: 0
+    - error_threshold: 1.0
+    - resolution: 1.0
+    - step_size: 0.1
+    - trans_epsilon: 0.01
+    - max_iterations: 30
+  - conf_decision_maker:
+    - auto_mission_reload: False
+    - auto_engage: False
+    - auto_mission_change: False
+    - use_fms: False
+    - disuse_vector_map: True
+    - num_of_steer_behind: 20
+    - change_threshold_dist: 1.0
+    - change_threshold_angle: 15.0
+    - goal_threshold_dist: 3.0
+    - goal_threshold_vel: 0.1
+    - stopped_vel: 0.1
+  - conf_voxel_grid_filter:
+    - voxel_leaf_size: 2.0
+    - measurement_range: 200
+
+launch_param:
+  - lidar_detector:
+    - detect_range: 25.0
+    - segmentation_rate: 100
+  - camera_detector:
+  - lidar_kf_contour_track:
+  - lidar_camera_fusion:
+  - twist_filter:
+  - pure_pursuit:
+    - linear_interpolation: False
+    - publishs_topic_for_steering_robot: False
+  - mpc:
+    - show_debug_info: False
+    - publish_debug_values: False
+    - vehicle_model_type: kinematics
+    - qp_solver_type: unconstraint_fast
+    - ctrl_period: 0.03
+    - admisible_position_error: 5 
+    - admisible_yaw_error_deg: 90 
+    - mpc_prediction_horizon: 70 
+    - mpc_prediction_sampling_time: 0.1
+    - mpc_weight_lat_error: 0.1
+    - mpc_weight_terminal_lat_error: 10
+    - mpc_weight_heading_error: 0
+    - mpc_weight_heading_error_squared_vel_coeff: 0.3
+    - mpc_weight_terminal_heading_error: 0.1
+    - mpc_weight_lat_jerk: 0
+    - mpc_weight_steering_input: 1 
+    - mpc_weight_steering_input_squared_vel_coeff: 0.25
+    - mpc_zero_ff_steer_deg: 2
+    - enable_path_smoothing: True
+    - path_smoothing_times: 1
+    - path_filter_moving_ave_num: 35
+    - curvature_smoothing_num: 35
+    - steering_lpf_cutoff_hz: 3
+    - vehicle_model_steer_tau: 0.3
+    - vehicle_model_wheelbase: 2.9
+    - steer_lim_deg:  35
+  - ndt:
+    - method_type: 0
+    - use_odom: False
+    - use_imu: False
+    - imu_upside_down: False
+    - imu_topic: /imu_raw
+    - get_height: False
+    - output_log_data: False
+  - decision_maker:
+    - points_topic: /points_lanes
+    - baselink_tf: base_link
+  - op_common_params:
+    - horizonDistance: 120
+    - maxLocalPlanDistance: 60
+    - pathDensity: 0.5
+    - rollOutDensity: 0.5
+    - rollOutsNumber: 4 
+    - maxVelocity: 15
+    - maxAcceleration: 3 
+    - maxDeceleration: -3
+    - enableFollowing: True
+    - enableSwerving: True
+    - minFollowingDistance: 30
+    - minDistanceToAvoid: 15
+    - maxDistanceToAvoid: 4
+    - enableStopSignBehavior: True 
+    - enableTrafficLightBehavior: False
+    - enableLaneChange: False
+    - horizontalSafetyDistance: 0.5
+    - verticalSafetyDistance: 0.5
+    - velocitySource: 1
+  - op_trajectory_generator:
+    - samplingTipMargin: 10
+    - samplingOutMargin: 15
+  - op_motion_predictor:
+    - enableCurbObstacles: True
+    - enableGenrateBranches: False
+    - max_distance_to_lane: 2
+    - prediction_distance: 25
+    - enableStepByStepSignal: False
+    - enableParticleFilterPrediction: False
+  - op_trajectory_evaluator:
+    - enablePrediction: True
+  - vel_pose_connect:
+    - topic_pose_stamped: /ndt_pose
+    - topic_twist_stamped: /estimate_twist
+    - sim_mode: True
+  - baselink_to_localizer:
+    - x: 1.2
+    - y: 0
+    - z: 2
+    - yaw: 0
+    - pitch: 0
+    - roll: 0
+    - frame_id: /base_link
+    - child_frame_id: /velodyne
+    - period_in_ms: 10
+  - point_cloud_loader:
+    - path: /home/choi/Desktop/multi_dtlane_kcity_real/pcdmap/filtering_2f.pcd
+  - vector_map_loader:
+    - path: /home/choi/Desktop/multi_dtlane_kcity_real/vectormap/dtlane.csv /home/choi/Desktop/multi_dtlane_kcity_real/vectormap/idx.csv /home/choi/Desktop/multi_dtlane_kcity_real/vectormap/lane.csv /home/choi/Desktop/multi_dtlane_kcity_real/vectormap/node.csv /home/choi/Desktop/multi_dtlane_kcity_real/vectormap/point.csv
+  - point_vector_tf:
+    - path: /home/choi/Desktop/multi_dtlane_kcity_real/tf_local.launch
+  - voxel_grid_filter:
+    - node_name: voxel_grid_filter
+    - points_topic: /points_raw
