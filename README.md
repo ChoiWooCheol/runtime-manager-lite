@@ -23,7 +23,6 @@ $ rosrun autoware_lite runtime_manager_lite.py
 <img src="/img/planning_quick_list.png" width="60%" height="60%">
 
 2. GUI (param & alive check) LiDAR detector on.
-<img src="autoware_lite/img/alive check.png" width="60%" height="60%">
 <img src="/img/detector_on.png" width="60%" height="60%">
 <img src="/img/alive_check.png" width="60%" height="60%">
 
