@@ -21,6 +21,7 @@ from autoware_config_msgs.msg import ConfigVoxelGridFilter
 from autoware_config_msgs.msg import ConfigWaypointFollower
 from autoware_config_msgs.msg import ConfigTwistFilter
 from autoware_config_msgs.msg import ConfigDecisionMaker
+from autoware_config_msgs.msg import ConfigRayGroundFilter
 
 from geometry_msgs.msg import TwistStamped
 from geometry_msgs.msg import PoseStamped
@@ -35,7 +36,8 @@ from autoware_msgs.msg import LampCmd
 from autoware_msgs.msg import TrafficLight
 from autoware_msgs.msg import DetectedObjectArray
 
-nodes = [["Detection", ["LiDAR detector", False], ["camera detector", False], ["lidar_kf_contour_track", False], ["lidar camera fusion", False]],
+nodes = [["Detection", ["LiDAR detector", False], ["camera detector", False], ["lidar_kf_contour_track", False], 
+            ["lidar camera fusion", False], ["lidar_euclidean_cluster_detect", False]],
          ["Follower", ["twist filter", False], ["pure pursuit", False], ["mpc", False], ["hybride stenly", False]],
          ["Localizer", ["ndt matching", False], ["ekf localizer", False]],
          ["Decision Maker", ["decision maker", False]],
@@ -45,7 +47,8 @@ nodes = [["Detection", ["LiDAR detector", False], ["camera detector", False], ["
          ["Vehicle Setting", ["vel_pose_connect", False], ["baselink to localizer", False]],
          ["QUICK START", ["detection_quick_start", False],["planning_quick_start", False]]]
 
-kill_instruction = [["/obb_generator /qt_detect_node", "/vision_darknet_detect /yolo3_rects",  "/lidar_kf_contour_track", "/detection/fusion_tools/range_fusion_visualization_01 /range_vision_fusion_01"],
+kill_instruction = [["/obb_generator /qt_detect_node", "/vision_darknet_detect /yolo3_rects",  "/lidar_kf_contour_track", 
+                        "/detection/fusion_tools/range_fusion_visualization_01 /range_vision_fusion_01", "/detection/lidar_detector/cluster_detect_visualization_01 /lidar_euclidean_cluster_detect"],
                ["/twist_filter /twist_gate", "/pure_pursuit", "/mpc_follower /mpc_waypoints_converter", "/hybride_stenly"],
                ["/ndt_matching", "/ekf_localizer"],
                ["/decision_maker"],
@@ -54,18 +57,18 @@ kill_instruction = [["/obb_generator /qt_detect_node", "/vision_darknet_detect /
                ["/pose_relay /vel_relay", "/base_link_to_localizer"]]
 
 map_nodes = [["Map", ["point cloud", False], ["vector map", False], ["point_vector tf", False]],
-             ["Sensing", ["sensor1", False], ["sensor2", False], ["sensor3", False], ["sensor4", False]],
+             ["Sensing", ["ray_ground_filter", False], ["cloud_transformer", False], ["sensor3", False], ["sensor4", False]],
              ["Point Downsampler", ["voxel grid filter", False]],
              ["QUICK START", ["map_quick_start", False], ["sensing_quick_start", False]]]
 
 kill_instruction2 = [["/points_map_loader", "/vector_map_loader", "/world_to_map"],
-                ["/sensor1", "/sensor2", "/sensor3", "/sensor4"],
+                ["/ray_ground_filter", "/cloud_transformer", "/sensor3", "/sensor4"],
                 ["/voxel_grid_filter"]]
 
 node_sequence_list = []
 inst_sequence_list = []
 
-check_alive = [["", "", "", ""], # Detection
+check_alive = [["", "", "", "", ""], # Detection
                ["", ""], # Follower
                ["", ""], # Localizer
                [""], # Decision maker
@@ -76,7 +79,7 @@ check_alive = [["", "", "", ""], # Detection
                ["", "", "", ""], # Sensing
                [""]] # Point Downsampler
 
-alive_names = [["LiDAR detector", "camera detector", "lidar_kf_contour_track", "lidar camera fusion"], # Detection
+alive_names = [["LiDAR detector", "camera detector", "lidar_kf_contour_track", "lidar camera fusion", "lidar_euclidean_cluster_detect"], # Detection
                ["twist filter", "waypoint_follower"], # Follower
                ["ndt matching", "ekf localizer"], # Localizer
                ["decision maker"], # Decision maker
@@ -84,7 +87,7 @@ alive_names = [["LiDAR detector", "camera detector", "lidar_kf_contour_track", "
                ["op_motion_predictor", "op_trajectory_evaluator", "op_trajectory_generator", "op_behavior_selector"], # Local Planner
                ["vel_pose_connect"], # Vehicle Setting
                ["point cloud", "vector map"], # Map
-               ["sensor1", "sensor2", "sensor3", "sensor4"], # Sensing
+               ["ray_ground_filter", "cloud_transformer", "sensor3", "sensor4"], # Sensing
                ["voxel_grid_filter"]] # Point Downsampler
 
 estop_state = False
@@ -101,6 +104,11 @@ def load_yaml(filename):
     f.close()
     return d
 
+def getYamlIndex(config, name):
+    for list_ in config:
+        if name in list_:
+            return list_[name]
+
 print("")
 default_yaml = load_yaml('default_param.yaml')
 planning_quickstart_yaml = load_yaml('planning_quickstart.yaml')
@@ -115,6 +123,7 @@ class AutowareConfigPublisher:
         self.pub_ndt                = rospy.Publisher('/config/ndt', ConfigNDT, latch=True, queue_size=10)
         self.pub_decision_maker     = rospy.Publisher('/config/decision_maker', ConfigDecisionMaker, latch=True, queue_size=10)
         self.pub_voxel_grid_filter  = rospy.Publisher('/config/voxel_grid_filter', ConfigVoxelGridFilter, latch=True, queue_size=10)
+        self.pub_ray_ground_filter  = rospy.Publisher('/config/ray_ground_filter', ConfigRayGroundFilter, latch=True, queue_size=10)
         
         self.setDefaultConfigParam()
 
@@ -127,16 +136,14 @@ class AutowareConfigPublisher:
                 print(cmd['cmd'])
                 os.system(cmd['cmd'])
 
-        par = conf[0]
-        val = par['conf_twist_filter']
+        val = getYamlIndex(conf, 'conf_twist_filter')
         data = ConfigTwistFilter()
         data.lateral_accel_limit    = float(val[0]['lateral_accel_limit'])
         data.lowpass_gain_linear_x  = float(val[1]['lowpass_gain_linear_x'])
         data.lowpass_gain_angular_z = float(val[2]['lowpass_gain_angular_z'])
         self.onConfigTwistFilter(data)
 
-        par = conf[1]
-        val = par['conf_waypoint_follower']
+        val = getYamlIndex(conf, 'conf_waypoint_follower')
         data = ConfigWaypointFollower()
         data.param_flag                 = int(val[0]['param_flag'])
         data.velocity                   = float(val[1]['velocity'])
@@ -146,9 +153,8 @@ class AutowareConfigPublisher:
         data.displacement_threshold     = float(val[5]['displacement_threshold'])
         data.relative_angle_threshold   = float(val[6]['relative_angle_threshold'])
         self.onConfigWaypointFollower(data)
-        
-        par = conf[2]
-        val = par['conf_ndt']
+
+        val = getYamlIndex(conf, 'conf_ndt')
         data = ConfigNDT()
         data.init_pos_gnss    = int(val[0]['init_pos_gnss'])
         data.use_predict_pose = int(val[1]['use_predict_pose'])
@@ -159,15 +165,14 @@ class AutowareConfigPublisher:
         data.max_iterations   = int(val[6]['max_iterations'])
         self.onConfigNdt(data)
 
-        par = conf[3]
-        val = par['conf_decision_maker']
+        val = getYamlIndex(conf, 'conf_decision_maker')
         data = ConfigDecisionMaker()
-        data.auto_mission_reload    = bool(val[0]['auto_mission_reload'])
-        data.auto_engage            = bool(val[1]['auto_engage'])
-        data.auto_mission_change    = bool(val[2]['auto_mission_change'])
-        data.use_fms                = bool(val[3]['use_fms'])
-        data.disuse_vector_map      = bool(val[4]['disuse_vector_map'])
-        data.num_of_steer_behind    = int(val[5]['num_of_steer_behind'])
+        data.auto_mission_reload    = bool( val[0]['auto_mission_reload'])
+        data.auto_engage            = bool( val[1]['auto_engage'])
+        data.auto_mission_change    = bool( val[2]['auto_mission_change'])
+        data.use_fms                = bool( val[3]['use_fms'])
+        data.disuse_vector_map      = bool( val[4]['disuse_vector_map'])
+        data.num_of_steer_behind    = int(  val[5]['num_of_steer_behind'])
         data.change_threshold_dist  = float(val[6]['change_threshold_dist'])
         data.change_threshold_angle = float(val[7]['change_threshold_angle'])
         data.goal_threshold_dist    = float(val[8]['goal_threshold_dist'])
@@ -175,12 +180,24 @@ class AutowareConfigPublisher:
         data.stopped_vel            = float(val[10]['stopped_vel'])
         self.onConfigDecisionMaker(data)
 
-        par = conf[4]
-        val = par['conf_voxel_grid_filter']
+        val = getYamlIndex(conf, 'conf_voxel_grid_filter')
         data = ConfigVoxelGridFilter()
         data.voxel_leaf_size = float(val[0]['voxel_leaf_size'])
         data.measurement_range = float(val[1]['measurement_range'])
         self.onConfigVoxelGridFilter(data)
+
+        val = getYamlIndex(conf, 'conf_ray_ground_filter')
+        data = ConfigRayGroundFilter()
+        data.sensor_height               = float(val[0]['sensor_height'])
+        data.clipping_height             = float(val[1]['clipping_height'])
+        data.min_point_distance          = float(val[2]['min_point_distance'])
+        data.radial_divider_angle        = float(val[3]['radial_divider_angle'])
+        data.concentric_divider_distance = float(val[4]['concentric_divider_distance'])
+        data.local_max_slope             = float(val[5]['local_max_slope'])
+        data.general_max_slope           = float(val[6]['general_max_slope'])
+        data.min_height_threshold        = float(val[7]['min_height_threshold'])
+        data.reclass_distance_threshold  = float(val[8]['reclass_distance_threshold'])
+        self.onConfigRayGroundFilter(data)
 
     def onConfigTwistFilter(self, data): # twist filter
         self.pub_twist_filter.publish(data)
@@ -196,6 +213,9 @@ class AutowareConfigPublisher:
 
     def onConfigVoxelGridFilter(self, data): # voxel grid filter
         self.pub_voxel_grid_filter.publish(data)
+
+    def onConfigRayGroundFilter(self, data): # ray_ground_filter
+        self.pub_ray_ground_filter.publish(data)
 
 class AutowareAliveNodesCheck:
     def __init__(self):
@@ -217,9 +237,12 @@ class AutowareAliveNodesCheck:
         rospy.Subscriber('points_map', PointCloud2, self.checkPointMapLoader) # point map
         rospy.Subscriber('vmap_stat', Bool, self.checkVectorMapLoader) # vector map
         rospy.Subscriber('/filtered_points', PointCloud2, self.checkVoxelGridFilter) # voxel grid filter
+        rospy.Subscriber('/points_no_ground', PointCloud2, self.checkRayGroundFilter) # ray ground filter
+        rospy.Subscriber('/points_transformed', PointCloud2, self.checkCloudTransformer) # cloud transformer
+        
         # rospy.Subscriber('sensor topic', msgtype, checkCallBack) # sensor check subscriber
 
-        self.deadCount = [[-1,-1,-1,-1], # Detection
+        self.deadCount = [[-1,-1,-1,-1,-1], # Detection
                           [-1,-1], # Follower
                           [-1,-1], # Localizer
                           [-1], # Decision maker
@@ -333,11 +356,22 @@ class AutowareAliveNodesCheck:
     #        self.mutex.acquire()
     #        self.deadCount[8][]   = self.reset_time
     #        self.mutex.release()
+    def checkRayGroundFilter(self, data):
+        if "/ray_ground_filter" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[8][0]   = self.reset_time
+            self.mutex.release()
+    def checkCloudTransformer(self, data):
+        if "/cloud_transformer" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[8][1]   = self.reset_time
+            self.mutex.release()
     def checkVoxelGridFilter(self, data):
         if "/voxel_grid_filter" in node_sequence_list:
             self.mutex.acquire()
             self.deadCount[9][0]   = self.reset_time
             self.mutex.release()
+    
 
     def upDateAliveState(self):
         while 1:
@@ -825,15 +859,13 @@ class MyWindow(Gtk.ApplicationWindow):
         param_list = []
         if idx1 == 0: # Detection
             if idx2 == 0: # lidar detector
-                
                 param1 = Gtk.Label('detect_range (25, 50)')
                 param2 = Gtk.Label('segmentation rate')
 
                 pv1 = Gtk.Entry()
                 pv2 = Gtk.Entry()
 
-                par = conf[0]
-                val = par['lidar_detector']
+                val = getYamlIndex(conf, 'lidar_detector')
 
                 #default values
                 pv1.set_text(str(val[0]['detect_range']))
@@ -877,8 +909,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv13 = Gtk.Entry()
 
                 #print(conf.index('lidar_kf_contour_track'))
-                par = conf[2]
-                val = par['lidar_kf_contour_track']
+                
+                val = getYamlIndex(conf, 'lidar_kf_contour_track')
 
                 #default values
                 pv1.set_text(str(val[0]['tracking_type'])) # tracking_type
@@ -925,6 +957,151 @@ class MyWindow(Gtk.ApplicationWindow):
 
                 param_list = [pv1,pv2,pv3,pv4,pv5,pv6,pv7,pv8,pv9,pv10,pv11,pv12,pv13]
 #            elif idx2 == 3: # lidar camera fusion
+            elif idx2 == 4: # lidar detector
+                param1 = Gtk.Label('use_gpu')
+                param2 = Gtk.Label('output_frame')
+                param3 = Gtk.Label('pose_estimation')
+                param4 = Gtk.Label('downsample_cloud')
+                param5 = Gtk.Label('points_node')
+                param6 = Gtk.Label('leaf_size (0.0 ~ 1.0)')
+                param7 = Gtk.Label('cluster_size_min (1 ~ 100,000)')
+                param8 = Gtk.Label('cluster_size_max (1 ~ 200,000)')
+                param9 = Gtk.Label('clustering_distance (0.0 ~ 10.0)')
+                param10 = Gtk.Label('clip_min_height (-5 ~ 5)')
+                param11 = Gtk.Label('clip_max_height (0.0 ~ 5.0)')
+                param12 = Gtk.Label('use_vector_map')
+                param13 = Gtk.Label('vectormap_frame')
+                param14 = Gtk.Label('wayarea_gridmap_topic')
+                param15 = Gtk.Label('wayarea_gridmap_layer')
+                param16 = Gtk.Label('wayarea_no_road_value (0 ~ 255)')
+                param17 = Gtk.Label('remove_points_upto (0.0 ~ 2.5)')
+                param18 = Gtk.Label('keep_lanes')
+                param19 = Gtk.Label('keep_lane_left_distance (0.0 ~ 100.0)')
+                param20 = Gtk.Label('keep_lane_right_distance (0.0 ~ 100.0)')
+                param21 = Gtk.Label('cluster_merge_threshold (0.0 ~ 10.0)')
+                param22 = Gtk.Label('use_multiple_thres')
+                param23 = Gtk.Label('clustering_ranges')
+                param24 = Gtk.Label('clustering_distances')
+                param25 = Gtk.Label('remove_ground')
+                param26 = Gtk.Label('use_diffnormals')
+                param27 = Gtk.Label('publish_filtered')
+
+                pv1 = Gtk.Entry()
+                pv2 = Gtk.Entry()
+                pv3 = Gtk.Entry()
+                pv4 = Gtk.Entry()
+                pv5 = Gtk.Entry()
+                pv6 = Gtk.Entry()
+                pv7 = Gtk.Entry()
+                pv8 = Gtk.Entry()
+                pv9 = Gtk.Entry()
+                pv10 = Gtk.Entry()
+                pv11 = Gtk.Entry()
+                pv12 = Gtk.Entry()
+                pv13 = Gtk.Entry()
+                pv14 = Gtk.Entry()
+                pv15 = Gtk.Entry()
+                pv16 = Gtk.Entry()
+                pv17 = Gtk.Entry()
+                pv18 = Gtk.Entry()
+                pv19 = Gtk.Entry()
+                pv20 = Gtk.Entry()
+                pv21 = Gtk.Entry()
+                pv22 = Gtk.Entry()
+                pv23 = Gtk.Entry()
+                pv24 = Gtk.Entry()
+                pv25 = Gtk.Entry()
+                pv26 = Gtk.Entry()
+                pv27 = Gtk.Entry()
+
+                val = getYamlIndex(conf, 'lidar_euclidean_cluster_detect')
+
+                #default values
+                pv1.set_text(str(val[0]['use_gpu'])) # use_gpu
+                pv2.set_text(str(val[1]['output_frame'])) # output_frame
+                pv3.set_text(str(val[2]['pose_estimation'])) # pose_estimation
+                pv4.set_text(str(val[3]['downsample_cloud'])) # downsample_cloud
+                pv5.set_text(str(val[4]['points_node'])) # points_node
+                pv6.set_text(str(val[5]['leaf_size'])) # leaf_size
+                pv7.set_text(str(val[6]['cluster_size_min'])) # cluster_size_min
+                pv8.set_text(str(val[7]['cluster_size_max'])) # cluster_size_max
+                pv9.set_text(str(val[8]['clustering_distance'])) # clustering_distance
+                pv10.set_text(str(val[9]['clip_min_height'])) # clip_min_height
+                pv11.set_text(str(val[10]['clip_max_height'])) # clip_max_height
+                pv12.set_text(str(val[11]['use_vector_map'])) # use_vector_map
+                pv13.set_text(str(val[12]['vectormap_frame'])) #  vectormap_frame
+                pv14.set_text(str(val[13]['wayarea_gridmap_topic'])) # wayarea_gridmap_topic
+                pv15.set_text(str(val[14]['wayarea_gridmap_layer'])) # wayarea_gridmap_layer
+                pv16.set_text(str(val[15]['wayarea_no_road_value'])) # wayarea_no_road_value 
+                pv17.set_text(str(val[16]['remove_points_upto'])) # remove_points_upto 
+                pv18.set_text(str(val[17]['keep_lanes'])) # keep_lanes
+                pv19.set_text(str(val[18]['keep_lane_left_distance'])) # keep_lane_left_distance
+                pv20.set_text(str(val[19]['keep_lane_right_distance'])) # keep_lane_right_distance 
+                pv21.set_text(str(val[20]['cluster_merge_threshold'])) # cluster_merge_threshold 
+                pv22.set_text(str(val[21]['use_multiple_thres'])) #use_multiple_thres 
+                pv23.set_text(str(val[22]['clustering_ranges'])) #  clustering_ranges 
+                pv24.set_text(str(val[23]['clustering_distances'])) #  clustering_distances 
+                pv25.set_text(str(val[24]['remove_ground'])) # remove_ground
+                pv26.set_text(str(val[25]['use_diffnormals'])) # use_diffnormals
+                pv27.set_text(str(val[26]['publish_filtered'])) # publish_filtered
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param4, param3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param5, param4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param6, param5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param7, param6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param8, param7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param9, param8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param10, param9, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param11, param10, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param12, param11, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param13, param12, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param14, param13, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param15, param14, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param16, param15, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param17, param16, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param18, param17, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param19, param18, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param20, param19, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param21, param20, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param22, param21, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param23, param22, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param24, param23, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param25, param24, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param26, param25, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param27, param26, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(pv2, pv1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv3, pv2, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(pv4, pv3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv5, pv4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv6, pv5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv7, pv6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv8, pv7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv9, pv8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv10, pv9, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv11, pv10, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv12, pv11, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv13, pv12, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(pv14, pv13, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv15, pv14, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv16, pv15, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv17, pv16, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv18, pv17, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv19, pv18, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv20, pv19, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv21, pv20, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(pv22, pv21, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv23, pv22, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv24, pv23, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv25, pv24, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv26, pv25, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv27, pv26, Gtk.PositionType.BOTTOM, 1, 1)
+
+                param_list = [pv1,pv2,pv3,pv4,pv5,pv6,pv7,pv8,pv9,pv10,pv11,pv12,pv13,pv14,pv15,pv16,pv17,pv18,pv19,pv20,pv21,pv22,pv23,pv24,pv25,pv26,pv27]
         elif idx1 == 1: # Follower
             if idx2 == 0: # twist filter /config/twist_filter
                 param1 = Gtk.Label('lateral_accel_limit (0.0 ~ 5.0)')
@@ -934,9 +1111,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv1 = Gtk.Entry()
                 pv2 = Gtk.Entry()
                 pv3 = Gtk.Entry()
-                
-                par = conf2[0]
-                val = par['conf_twist_filter']
+
+                val = getYamlIndex(conf, 'conf_twist_filter')
 
                 #default values
                 pv1.set_text(str(val[0]['lateral_accel_limit']))
@@ -971,10 +1147,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv8 = Gtk.Entry()
                 pv9 = Gtk.Entry()
 
-                lpar = conf[5]
-                lval = lpar['pure_pursuit']
-                cpar = conf2[1]
-                cval = cpar['conf_waypoint_follower']
+                lval = getYamlIndex(conf, 'pure_pursuit')
+                cval = getYamlIndex(conf2, 'conf_waypoint_follower')
 
                 #default values
                 pv1.set_text(str(cval[0]['param_flag']))
@@ -1062,8 +1236,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv25 = Gtk.Entry()
                 pv26 = Gtk.Entry()
 
-                par = conf[6]
-                val = par['mpc']
+                val = getYamlIndex(conf, 'mpc')
 
                 #default values
                 pv1.set_text(str(val[0]['show_debug_info'])) # show_debug_info
@@ -1184,10 +1357,9 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv13 = Gtk.Entry()
                 pv14 = Gtk.Entry()
 
-                lpar = conf[7]
-                lval = lpar['ndt']
-                cpar = conf2[2]
-                cval = cpar['conf_ndt']
+
+                lval = getYamlIndex(conf, 'ndt')
+                cval = getYamlIndex(conf2, 'conf_ndt')
 
                 #default values
                 pv1.set_text(str(cval[0]['init_pos_gnss'])) # init_pos_gnss
@@ -1269,10 +1441,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv12 = Gtk.Entry()
                 pv13 = Gtk.Entry()
 
-                lpar = conf[8]
-                lval = lpar['decision_maker']
-                cpar = conf2[3]
-                cval = cpar['conf_decision_maker']
+                lval = getYamlIndex(conf, 'decision_maker')
+                cval = getYamlIndex(conf2, 'conf_decision_maker')
 
                 #default values
                 pv1.set_text(str(cval[0]['auto_mission_reload'])) # auto_mission_reload
@@ -1362,8 +1532,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv18 = Gtk.Entry()
                 pv19 = Gtk.Entry()
 
-                par = conf[9]
-                val = par['op_common_params']
+                val = getYamlIndex(conf, 'op_common_params')
+
                 #default values
                 pv1.set_text(str(val[0]['horizonDistance'])) # horizonDistance
                 pv2.set_text(str(val[1]['maxLocalPlanDistance'])) # maxLocalPlanDistance
@@ -1432,8 +1602,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv1 = Gtk.Entry()
                 pv2 = Gtk.Entry()
 
-                par = conf[10]
-                val = par['op_trajectory_generator']
+                val = getYamlIndex(conf, 'op_trajectory_generator')
 
                 pv1.set_text(str(val[0]['samplingTipMargin'])) # samplingTipMargin
                 pv2.set_text(str(val[1]['samplingOutMargin'])) # samplingOutMargin
@@ -1460,8 +1629,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv5 = Gtk.Entry()
                 pv6 = Gtk.Entry()
 
-                par = conf[11]
-                val = par['op_motion_predictor']
+                val = getYamlIndex(conf, 'op_motion_predictor')
 
                 #default values
                 pv1.set_text(str(val[0]['enableCurbObstacles'])) # enableCurbObstacles
@@ -1488,8 +1656,7 @@ class MyWindow(Gtk.ApplicationWindow):
             elif idx2 == 3: # op trajectory evaluator
                 param1 = Gtk.Label('enablePrediction')
                 pv1 = Gtk.Entry()
-                par = conf[12]
-                val = par['op_trajectory_evaluator']
+                val = getYamlIndex(conf, 'op_trajectory_evaluator')
                 pv1.set_text(str(val[0]['enablePrediction'])) # enablePrediction
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
@@ -1506,8 +1673,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv2 = Gtk.Entry()
                 pv3 = Gtk.Entry()
 
-                par = conf[13]
-                val = par['vel_pose_connect']
+                val = getYamlIndex(conf, 'vel_pose_connect')
 
                 pv1.set_text(str(val[0]['topic_pose_stamped'])) # topic_pose_stamped
                 pv2.set_text(str(val[1]['topic_twist_stamped'])) # topic_twist_stamped
@@ -1543,8 +1709,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv8 = Gtk.Entry()
                 pv9 = Gtk.Entry()
 
-                par = conf[14]
-                val = par['baselink_to_localizer']
+                val = getYamlIndex(conf, 'baselink_to_localizer')
 
                 #default values
                 pv1.set_text(str(val[0]['x'])) # x
@@ -1618,8 +1783,7 @@ class MyWindow(Gtk.ApplicationWindow):
             if idx2 == 0: # point cloud
                 param1 = Gtk.Label('PCD MAP path')
                 pv1 = Gtk.Entry()
-                par = conf[15]
-                val = par['point_cloud_loader']
+                val = getYamlIndex(conf, 'point_cloud_loader')
                 #default values
                 pv1.set_text(str(val[0]['path']))
                 in_grid.attach(param1, 0, 0, 1, 1)
@@ -1628,8 +1792,7 @@ class MyWindow(Gtk.ApplicationWindow):
             elif idx2 == 1: # vector map
                 param1 = Gtk.Label('Vector MAP path ( path1 path2 path3 ... )')
                 pv1 = Gtk.Entry()
-                par = conf[16]
-                val = par['vector_map_loader']
+                val = getYamlIndex(conf, 'vector_map_loader')
                 #default values
                 pv1.set_text(str(val[0]['path']))
                 in_grid.attach(param1, 0, 0, 1, 1)
@@ -1638,16 +1801,95 @@ class MyWindow(Gtk.ApplicationWindow):
             elif idx2 == 2: # point vector tf
                 param1 = Gtk.Label('tf launch path')
                 pv1 = Gtk.Entry()
-                par = conf[17]
-                val = par['point_vector_tf']
+                val = getYamlIndex(conf, 'point_vector_tf')
                 #default values
                 pv1.set_text(str(val[0]['path']))
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
                 param_list = [pv1]
-        #elif idx1 == 1: # Sensing
-            #if idx2 == 0: # sensor1
-            #elif idx2 == 1: # sensor2
+        elif idx1 == 1: # Sensing
+            if idx2 == 0: # ray_ground_filter
+                param1 = Gtk.Label('input_point_topic')
+                param2 = Gtk.Label('sensor_height (-5.0 ~ 5.0)')
+                param3 = Gtk.Label('clipping_height (-5.0 ~ 5.0)')
+                param4 = Gtk.Label('min_point_distance (0.0 ~ 5.0)')
+                param5 = Gtk.Label('radial_divider_angle (0.01 ~ 5.0)')
+                param6 = Gtk.Label('concentric_divider_distance (0.01 ~ 1.0)')
+                param7 = Gtk.Label('local_max_slope (1 ~ 25)')
+                param8 = Gtk.Label('general_max_slope (1 ~ 25)')
+                param9 = Gtk.Label('min_height_threshold (0.01 ~ 0.5)')
+                param10 = Gtk.Label('reclass_distance_threshold (0.01 ~ 1.0)')
+
+                pv1 = Gtk.Entry()
+                pv2 = Gtk.Entry()
+                pv3 = Gtk.Entry()
+                pv4 = Gtk.Entry()
+                pv5 = Gtk.Entry()
+                pv6 = Gtk.Entry()
+                pv7 = Gtk.Entry()
+                pv8 = Gtk.Entry()
+                pv9 = Gtk.Entry()
+                pv10 = Gtk.Entry()
+
+                val = getYamlIndex(conf2, 'conf_ray_ground_filter')
+
+                #default values
+                pv1.set_text('/points_raw')
+                pv2.set_text(str(val[0]['sensor_height'])) 
+                pv3.set_text(str(val[1]['clipping_height'])) 
+                pv4.set_text(str(val[2]['min_point_distance'])) 
+                pv5.set_text(str(val[3]['radial_divider_angle']))
+                pv6.set_text(str(val[4]['concentric_divider_distance'])) 
+                pv7.set_text(str(val[5]['local_max_slope'])) 
+                pv8.set_text(str(val[6]['general_max_slope'])) 
+                pv9.set_text(str(val[7]['min_height_threshold'])) 
+                pv10.set_text(str(val[8]['reclass_distance_threshold']))
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param4, param3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param5, param4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param6, param5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param7, param6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param8, param7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param9, param8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param10, param9, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(pv2, pv1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv3, pv2, Gtk.PositionType.BOTTOM, 1, 1)                
+                in_grid.attach_next_to(pv4, pv3, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv5, pv4, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv6, pv5, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv7, pv6, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv8, pv7, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv9, pv8, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv10, pv9, Gtk.PositionType.BOTTOM, 1, 1)
+                param_list = [pv1,pv2,pv3,pv4,pv5,pv6,pv7,pv8,pv9,pv10]
+            elif idx2 == 1: # cloud_transformer
+                param1 = Gtk.Label('input_point_topic')
+                param2 = Gtk.Label('target_frame')
+                param3 = Gtk.Label('output_point_topic')
+
+                pv1 = Gtk.Entry()
+                pv2 = Gtk.Entry()
+                pv3 = Gtk.Entry()
+
+                val = getYamlIndex(conf, 'cloud_transformer')
+
+                pv1.set_text(str(val[0]['input_point_topic'])) 
+                pv2.set_text(str(val[1]['target_frame'])) 
+                pv3.set_text(str(val[2]['output_point_topic'])) 
+
+                in_grid.attach(param1, 0, 0, 1, 1)
+                in_grid.attach_next_to(param2, param1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(param3, param2, Gtk.PositionType.BOTTOM, 1, 1)
+
+                in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
+                in_grid.attach_next_to(pv2, pv1, Gtk.PositionType.BOTTOM, 1, 1)
+                in_grid.attach_next_to(pv3, pv2, Gtk.PositionType.BOTTOM, 1, 1)
+                param_list = [pv1,pv2,pv3]
             #elif idx2 == 2: # sensor3
             #elif idx2 == 3: # sensor4
         elif idx1 == 2: # Point Downsampler
@@ -1664,10 +1906,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv3 = Gtk.Entry()
                 pv4 = Gtk.Entry()
 
-                lpar = conf[18]
-                lval = lpar['voxel_grid_filter']
-                cpar = conf2[4]
-                cval = cpar['conf_voxel_grid_filter']
+                lval = getYamlIndex(conf, 'voxel_grid_filter')
+                cval = getYamlIndex(conf2, 'conf_voxel_grid_filter')
 
                 pv1.set_text(str(lval[0]['node_name'])) # node_name
                 pv2.set_text(str(lval[1]['points_topic'])) # points_topic
@@ -1735,6 +1975,36 @@ class MyWindow(Gtk.ApplicationWindow):
             elif idx2 == 3: # lidar camera fusion
                 run_cmd = 'None'
                 node_sequence_list.append('/detection/fusion_tools/range_fusion_visualization_01 /range_vision_fusion_01')
+            elif idx2 == 4: # lidar_euclidean_cluster_detect
+                run_cmd = ('roslaunch lidar_euclidean_cluster_detect lidar_euclidean_cluster_detect.launch'
+                            + ' use_gpu:=' + plist[0].get_text()
+                            + ' output_frame:=' + plist[1].get_text()
+                            + ' pose_estimation:=' + plist[2].get_text()
+                            + ' downsample_cloud:=' + plist[3].get_text()
+                            + ' points_node:=' + plist[4].get_text()
+                            + ' leaf_size:=' + plist[5].get_text()
+                            + ' cluster_size_min:=' + plist[6].get_text()
+                            + ' cluster_size_max:=' + plist[7].get_text()
+                            + ' clustering_distance:=' + plist[8].get_text()
+                            + ' clip_min_height:=' + plist[9].get_text()
+                            + ' clip_max_height:=' + plist[10].get_text()
+                            + ' use_vector_map:=' + plist[11].get_text()
+                            + ' vectormap_frame:=' + plist[12].get_text()
+                            + ' wayarea_gridmap_topic:=' + plist[13].get_text()
+                            + ' wayarea_gridmap_layer:=' + plist[14].get_text()
+                            + ' wayarea_no_road_value:=' + plist[15].get_text()
+                            + ' remove_points_upto:=' + plist[16].get_text()
+                            + ' keep_lanes:=' + plist[17].get_text()
+                            + ' keep_lane_left_distance:=' + plist[18].get_text()
+                            + ' keep_lane_right_distance:=' + plist[19].get_text()
+                            + ' cluster_merge_threshold:=' + plist[20].get_text()
+                            + ' use_multiple_thres:=' + plist[21].get_text()
+                            + ' clustering_ranges:=' + plist[22].get_text()
+                            + ' clustering_distances:=' + plist[23].get_text()
+                            + ' remove_ground:=' + plist[24].get_text()
+                            + ' use_diffnormals:=' + plist[25].get_text()
+                            + ' publish_filtered:=' + plist[26].get_text())
+                node_sequence_list.append('/detection/lidar_detector/cluster_detect_visualization_01 /lidar_euclidean_cluster_detect')
         elif idx1 == 1: # Follower
             if idx2 == 0: # twist filter /config/twist_filter
                 data = ConfigTwistFilter()
@@ -1931,9 +2201,36 @@ class MyWindow(Gtk.ApplicationWindow):
                 run_cmd = ('roslaunch '
                             + plist[0].get_text())
                 node_sequence_list.append('/world_to_map')
-        #elif idx1 == 1: # Sensing
-            #if idx2 == 0: # sensor1
-            #elif idx2 == 1: # sensor2
+        elif idx1 == 1: # Sensing
+            if idx2 == 0: # ray_ground_filter
+                data = ConfigRayGroundFilter()
+                data.sensor_height               = float(plist[1].get_text())
+                data.clipping_height             = float(plist[2].get_text())
+                data.min_point_distance          = float(plist[3].get_text())
+                data.radial_divider_angle        = float(plist[4].get_text())
+                data.concentric_divider_distance = float(plist[5].get_text())
+                data.local_max_slope             = float(plist[6].get_text())
+                data.general_max_slope           = float(plist[7].get_text())
+                data.min_height_threshold        = float(plist[8].get_text())
+                data.reclass_distance_threshold  = float(plist[9].get_text())
+                run_cmd = ('roslaunch points_preprocessor ray_ground_filter.launch node_name:=ray_ground_filter'
+                          + ' input_point_topic:='           + plist[0].get_text()
+                          + ' sensor_height:='               + plist[1].get_text()
+                          + ' clipping_height:='             + plist[2].get_text()
+                          + ' min_point_distance:='          + plist[3].get_text()
+                          + ' radial_divider_angle:='        + plist[4].get_text()
+                          + ' concentric_divider_distance:=' + plist[5].get_text()
+                          + ' local_max_slope:='             + plist[6].get_text()
+                          + ' general_max_slope:='           + plist[7].get_text()
+                          + ' min_height_threshold:='        + plist[8].get_text()
+                          + ' reclass_distance_threshold:='  + plist[9].get_text())
+                node_sequence_list.append('/ray_ground_filter')
+            elif idx2 == 1: # cloud_transformer
+                run_cmd = ('roslaunch points_preprocessor cloud_transformer.launch'
+                          + ' input_point_topic:='  + plist[0].get_text()    
+                          + ' target_frame:='       + plist[1].get_text()
+                          + ' output_point_topic:=' + plist[2].get_text())
+                node_sequence_list.append('/cloud_transformer')
             #elif idx2 == 2: # sensor3
             #elif idx2 == 3: # sensor4
         elif idx1 == 2: # Point Downsampler

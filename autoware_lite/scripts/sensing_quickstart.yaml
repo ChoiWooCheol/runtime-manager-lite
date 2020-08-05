@@ -1,37 +1,22 @@
-nodelist: []
+nodelist: [/ray_ground_filter, /cloud_transformer]
 routine:
   -
-    instruction: 
+    instruction: roslaunch points_preprocessor ray_ground_filter.launch 
     parameters: 
-      -
-        args:   
+      - args: node_name:=ray_ground_filter
+      - args: input_point_topic:=/points_raw
+      - args: sensor_height:=1.8
+      - args: clipping_height:=0.2
+      - args: min_point_distance:=1.85
+      - args: radial_divider_angle:=0.08
+      - args: concentric_divider_distance:=0.01
+      - args: local_max_slope:=8
+      - args: general_max_slope:=5
+      - args: min_height_threshold:=0.05
+      - args: reclass_distance_threshold:=0.2
   -
-    instruction: 
+    instruction: roslaunch points_preprocessor cloud_transformer.launch
     parameters:
-      -
-        args:   
-  -
-    instruction: 
-    parameters:
-      -
-        args:   
-  -
-    instruction: 
-    parameters:
-      -
-        args:   
-  -
-    instruction: 
-    parameters:
-      -
-        args:   
-  -
-    instruction: 
-    parameters:
-      -
-        args:   
-  -
-    instruction: 
-    parameters:
-      -
-        args:   
+      - args: input_point_topic:=/points_raw
+      - args: target_frame:=base_link
+      - args: output_point_topic:=/points_transformed

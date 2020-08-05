@@ -1,0 +1,21 @@
+nodelist: [/obb_generator /qt_detect_node, /lidar_kf_contour_track]
+routine:
+  -
+    instruction: roslaunch lidar_detect qt_detect_launch.launch
+    parameters: 
+  -
+    instruction: roslaunch lidar_kf_contour_track lidar_kf_contour_track.launch
+    parameters:
+      - args: tracking_type:=1
+      - args: min_object_size:=0.1
+      - args: max_object_size:=10
+      - args: vector_map_filter_distance:=2
+      - args: enableLogging:=False
+      - args: polygon_quarters:=8
+      - args: polygon_resolution:=0.5
+      - args: max_association_distance:=3
+      - args: max_association_size_diff:=2.5
+      - args: max_remeber_time:=3
+      - args: trust_counter:=5
+      - args: enableSimulationMode:=True
+      - args: enableStepByStepMode:=False

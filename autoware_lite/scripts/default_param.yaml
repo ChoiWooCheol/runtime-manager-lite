@@ -1,3 +1,14 @@
+setup:
+  - tf_setup:
+    - cmd: rosparam set tf_x 1.2
+    - cmd: rosparam set tf_y 0.0
+    - cmd: rosparam set tf_z 2.0
+    - cmd: rosparam set tf_yaw 0.0
+    - cmd: rosparam set tf_pitch 0.0
+    - cmd: rosparam set tf_roll 0.0
+    - cmd: rosparam set localizer velodyne
+    - cmd: rosparam set /use_sim_time false
+
 config:
   - conf_twist_filter:
     - lateral_accel_limit: 0.8
@@ -34,6 +45,16 @@ config:
   - conf_voxel_grid_filter:
     - voxel_leaf_size: 2.0
     - measurement_range: 200
+  - conf_ray_ground_filter:
+    - sensor_height : 1.8
+    - clipping_height : 0.2
+    - min_point_distance : 1.85
+    - radial_divider_angle : 0.08
+    - concentric_divider_distance : 0.01 
+    - local_max_slope : 8
+    - general_max_slope : 5 
+    - min_height_threshold : 0.05
+    - reclass_distance_threshold : 0.2 
 
 launch_param:
   - lidar_detector:
@@ -41,7 +62,48 @@ launch_param:
     - segmentation_rate: 100
   - camera_detector:
   - lidar_kf_contour_track:
+    - tracking_type: 1
+    - min_object_size: 0.1
+    - max_object_size: 10
+    - vector_map_filter_distance: 2
+    - enableLogging: False
+    - polygon_quarters: 8
+    - polygon_resolution: 0.5
+    - max_association_distance: 3
+    - max_association_size_diff: 2.5
+    - max_remeber_time: 3
+    - trust_counter: 5
+    - enableSimulationMode: True
+    - enableStepByStepMode: False
   - lidar_camera_fusion:
+  - lidar_euclidean_cluster_detect:
+    - use_gpu: False
+    - output_frame: velodyne
+    - pose_estimation: False
+    - downsample_cloud: False
+    - points_node: /filtered_points
+    - leaf_size: 0.1
+    - cluster_size_min: 20
+    - cluster_size_max: 14409
+    - clustering_distance: 0.75
+    - clip_min_height: -5
+    - clip_max_height: 1.5
+    - use_vector_map: False
+    - vectormap_frame: False
+    - wayarea_gridmap_topic: grid_map_wayarea
+    - wayarea_gridmap_layer: wayarea
+    - wayarea_no_road_value: 255
+    - remove_points_upto: 0
+    - keep_lanes: False
+    - keep_lane_left_distance: 5
+    - keep_lane_right_distance: 5
+    - cluster_merge_threshold: 1.5
+    - use_multiple_thres: True
+    - clustering_ranges: '[15,30,45,60]'
+    - clustering_distances: '[0.5,1.1,1.6,2.1,2.6]'
+    - remove_ground: False
+    - use_diffnormals: False
+    - publish_filtered: False
   - twist_filter:
   - pure_pursuit:
     - linear_interpolation: False
@@ -139,3 +201,7 @@ launch_param:
   - voxel_grid_filter:
     - node_name: voxel_grid_filter
     - points_topic: /points_raw
+  - cloud_transformer:
+    - input_point_topic: /points_raw
+    - target_frame: base_link
+    - output_point_topic: /points_transformed

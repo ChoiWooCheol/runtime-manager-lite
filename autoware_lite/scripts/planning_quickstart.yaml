@@ -1,0 +1,98 @@
+nodelist: [/pose_relay /vel_relay, /op_common_params, /op_trajectory_generator, /op_motion_predictor, /op_trajectory_evaluator, /op_behavior_selector, /ndt_matching]
+routine:
+  -
+    instruction: roslaunch autoware_connector vel_pose_connect.launch
+    parameters:
+      - args: topic_pose_stamped:=/ndt_pose
+      - args: topic_twist_stamped:=/estimate_twist
+      - args: sim_mode:=True
+  -
+    instruction: roslaunch op_local_planner op_common_params.launch 
+    parameters: 
+      - args: horizonDistance:=120
+      - args: maxLocalPlanDistance:=60
+      - args: pathDensity:=0.5
+      - args: rollOutDensity:=0.5 
+      - args: rollOutsNumber:=4 
+      - args: maxVelocity:=15 
+      - args: maxAcceleration:=3 
+      - args: maxDeceleration:=-3 
+      - args: enableFollowing:=True 
+      - args: enableSwerving:=True 
+      - args: minFollowingDistance:=30 
+      - args: minDistanceToAvoid:=15 
+      - args: maxDistanceToAvoid:=4 
+      - args: enableStopSignBehavior:=True 
+      - args: enableTrafficLightBehavior:=False 
+      - args: enableLaneChange:=False 
+      - args: horizontalSafetyDistance:=0.5 
+      - args: verticalSafetyDistance:=0.5 
+      - args: velocitySource:=1
+  -
+    instruction: roslaunch op_local_planner op_trajectory_generator.launch 
+    parameters:
+      - args: samplingTipMargin:=10 
+      - args: samplingOutMargin:=15
+  -
+    instruction: roslaunch op_local_planner op_motion_predictor.launch 
+    parameters:
+      - args: enableCurbObstacles:=True 
+      - args: enableGenrateBranches:=False 
+      - args: max_distance_to_lane:=2 
+      - args: prediction_distance:=2 
+      - args: enableStepByStepSignal:=25 
+      - args: enableParticleFilterPrediction:=False
+  -
+    instruction: roslaunch op_local_planner op_trajectory_evaluator.launch 
+    parameters:
+      - args: enablePrediction:=True
+  -
+    instruction: roslaunch op_local_planner op_behavior_selector.launch
+    parameters: 
+  -
+    instruction: roslaunch lidar_localizer ndt_matching.launch 
+    parameters:
+      - args: method_type:=0 
+      - args: use_odom:=False 
+      - args: use_imu:=False 
+      - args: imu_upside_down:=False 
+      - args: imu_topic:=/imu_raw 
+      - args: get_height:=False 
+      - args: output_log_data:=False
+#  -
+#    instruction: 
+#    parameters:
+#      -
+#        args:   
+#  -
+#    instruction: 
+#    parameters:
+#      -
+#        args:   
+#  -
+#    instruction: 
+#    parameters:
+#      -
+#        args:   
+#  -
+#    instruction: 
+#    parameters:
+#      -
+#        args:   
+#  -
+#    instruction: 
+#    parameters:
+#      -
+#        args:   
+#  -
+#    instruction: 
+#    parameters:
+#      -
+#        args:   
+#  -
+#    instruction: 
+#    parameters:
+#      -
+#        args:   
+#
+#
