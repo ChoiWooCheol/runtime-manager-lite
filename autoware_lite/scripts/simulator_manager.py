@@ -129,21 +129,21 @@ class AutowareConfigPublisher:
 
     def setDefaultConfigParam(self):
         
-        conf = default_yaml.get('config', [])
-        setup = default_yaml.get('setup', [])
-        for inst in setup:
+        config_ = default_yaml.get('config', [])
+        setup_ = default_yaml.get('setup_', [])
+        for inst in setup_:
             for cmd in inst['tf_setup']:
                 print(cmd['cmd'])
                 os.system(cmd['cmd'])
 
-        val = getYamlIndex(conf, 'conf_twist_filter')
+        val = getYamlIndex(config_, 'conf_twist_filter')
         data = ConfigTwistFilter()
         data.lateral_accel_limit    = float(val[0]['lateral_accel_limit'])
         data.lowpass_gain_linear_x  = float(val[1]['lowpass_gain_linear_x'])
         data.lowpass_gain_angular_z = float(val[2]['lowpass_gain_angular_z'])
         self.onConfigTwistFilter(data)
 
-        val = getYamlIndex(conf, 'conf_waypoint_follower')
+        val = getYamlIndex(config_, 'conf_waypoint_follower')
         data = ConfigWaypointFollower()
         data.param_flag                 = int(val[0]['param_flag'])
         data.velocity                   = float(val[1]['velocity'])
@@ -154,7 +154,7 @@ class AutowareConfigPublisher:
         data.relative_angle_threshold   = float(val[6]['relative_angle_threshold'])
         self.onConfigWaypointFollower(data)
 
-        val = getYamlIndex(conf, 'conf_ndt')
+        val = getYamlIndex(config_, 'conf_ndt')
         data = ConfigNDT()
         data.init_pos_gnss    = int(val[0]['init_pos_gnss'])
         data.use_predict_pose = int(val[1]['use_predict_pose'])
@@ -165,7 +165,7 @@ class AutowareConfigPublisher:
         data.max_iterations   = int(val[6]['max_iterations'])
         self.onConfigNdt(data)
 
-        val = getYamlIndex(conf, 'conf_decision_maker')
+        val = getYamlIndex(config_, 'conf_decision_maker')
         data = ConfigDecisionMaker()
         data.auto_mission_reload    = bool( val[0]['auto_mission_reload'])
         data.auto_engage            = bool( val[1]['auto_engage'])
@@ -180,13 +180,13 @@ class AutowareConfigPublisher:
         data.stopped_vel            = float(val[10]['stopped_vel'])
         self.onConfigDecisionMaker(data)
 
-        val = getYamlIndex(conf, 'conf_voxel_grid_filter')
+        val = getYamlIndex(config_, 'conf_voxel_grid_filter')
         data = ConfigVoxelGridFilter()
         data.voxel_leaf_size = float(val[0]['voxel_leaf_size'])
         data.measurement_range = float(val[1]['measurement_range'])
         self.onConfigVoxelGridFilter(data)
 
-        val = getYamlIndex(conf, 'conf_ray_ground_filter')
+        val = getYamlIndex(config_, 'conf_ray_ground_filter')
         data = ConfigRayGroundFilter()
         data.sensor_height               = float(val[0]['sensor_height'])
         data.clipping_height             = float(val[1]['clipping_height'])
@@ -344,12 +344,12 @@ class AutowareAliveNodesCheck:
     def checkPointMapLoader(self, data):
         if "/points_map_loader" in node_sequence_list:
             self.mutex.acquire()
-            self.deadCount[7][0]   = self.reset_time
+            self.deadCount[7][0]   = 999999
             self.mutex.release()
     def checkVectorMapLoader(self, data):
         if "/vector_map_loader" in node_sequence_list:
             self.mutex.acquire()
-            self.deadCount[7][1]   = self.reset_time
+            self.deadCount[7][1]   = 999999
             self.mutex.release()
     #def checkSensor(self, data):
     #    if "sensor node name" in node_sequence_list:
@@ -688,8 +688,8 @@ class MyWindow(Gtk.ApplicationWindow):
                             + '     point cloud -------------> '      + check_alive[7][0] + '\n'
                             + '     vector map -------------> '       + check_alive[7][1] + '\n\n')
             sensing_txt = ('Sensing : \n'
-                            + '     sensor1 -------> ' + check_alive[8][0] + '\n'
-                            + '     sensor2 -------> ' + check_alive[8][1] + '\n'
+                            + '     ray_ground_filter -------> ' + check_alive[8][0] + '\n'
+                            + '     cloud_transformer -------> ' + check_alive[8][1] + '\n'
                             + '     sensor3 -------> ' + check_alive[8][2] + '\n'
                             + '     sensor4 -------> ' + check_alive[8][3] + '\n\n')
             downsampler_txt = ('Point Downsampler : \n'
@@ -853,8 +853,8 @@ class MyWindow(Gtk.ApplicationWindow):
         )
         set_param_box.pack_start(in_grid, True, True, 0)
 
-        conf = default_yaml.get('launch_param', [])
-        conf2 = default_yaml.get('config', [])
+        launch_ = default_yaml.get('launch_param', [])
+        config_ = default_yaml.get('config', [])
 
         param_list = []
         if idx1 == 0: # Detection
@@ -865,7 +865,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv1 = Gtk.Entry()
                 pv2 = Gtk.Entry()
 
-                val = getYamlIndex(conf, 'lidar_detector')
+                val = getYamlIndex(launch_, 'lidar_detector')
 
                 #default values
                 pv1.set_text(str(val[0]['detect_range']))
@@ -908,9 +908,9 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv12 = Gtk.Entry()
                 pv13 = Gtk.Entry()
 
-                #print(conf.index('lidar_kf_contour_track'))
+                #print(launch_.index('lidar_kf_contour_track'))
                 
-                val = getYamlIndex(conf, 'lidar_kf_contour_track')
+                val = getYamlIndex(launch_, 'lidar_kf_contour_track')
 
                 #default values
                 pv1.set_text(str(val[0]['tracking_type'])) # tracking_type
@@ -1014,7 +1014,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv26 = Gtk.Entry()
                 pv27 = Gtk.Entry()
 
-                val = getYamlIndex(conf, 'lidar_euclidean_cluster_detect')
+                val = getYamlIndex(launch_, 'lidar_euclidean_cluster_detect')
 
                 #default values
                 pv1.set_text(str(val[0]['use_gpu'])) # use_gpu
@@ -1112,7 +1112,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv2 = Gtk.Entry()
                 pv3 = Gtk.Entry()
 
-                val = getYamlIndex(conf, 'conf_twist_filter')
+                val = getYamlIndex(launch_, 'conf_twist_filter')
 
                 #default values
                 pv1.set_text(str(val[0]['lateral_accel_limit']))
@@ -1147,8 +1147,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv8 = Gtk.Entry()
                 pv9 = Gtk.Entry()
 
-                lval = getYamlIndex(conf, 'pure_pursuit')
-                cval = getYamlIndex(conf2, 'conf_waypoint_follower')
+                lval = getYamlIndex(launch_, 'pure_pursuit')
+                cval = getYamlIndex(config_, 'conf_waypoint_follower')
 
                 #default values
                 pv1.set_text(str(cval[0]['param_flag']))
@@ -1236,7 +1236,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv25 = Gtk.Entry()
                 pv26 = Gtk.Entry()
 
-                val = getYamlIndex(conf, 'mpc')
+                val = getYamlIndex(launch_, 'mpc')
 
                 #default values
                 pv1.set_text(str(val[0]['show_debug_info'])) # show_debug_info
@@ -1358,8 +1358,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv14 = Gtk.Entry()
 
 
-                lval = getYamlIndex(conf, 'ndt')
-                cval = getYamlIndex(conf2, 'conf_ndt')
+                lval = getYamlIndex(launch_, 'ndt')
+                cval = getYamlIndex(config_, 'conf_ndt')
 
                 #default values
                 pv1.set_text(str(cval[0]['init_pos_gnss'])) # init_pos_gnss
@@ -1441,8 +1441,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv12 = Gtk.Entry()
                 pv13 = Gtk.Entry()
 
-                lval = getYamlIndex(conf, 'decision_maker')
-                cval = getYamlIndex(conf2, 'conf_decision_maker')
+                lval = getYamlIndex(launch_, 'decision_maker')
+                cval = getYamlIndex(config_, 'conf_decision_maker')
 
                 #default values
                 pv1.set_text(str(cval[0]['auto_mission_reload'])) # auto_mission_reload
@@ -1532,7 +1532,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv18 = Gtk.Entry()
                 pv19 = Gtk.Entry()
 
-                val = getYamlIndex(conf, 'op_common_params')
+                val = getYamlIndex(launch_, 'op_common_params')
 
                 #default values
                 pv1.set_text(str(val[0]['horizonDistance'])) # horizonDistance
@@ -1602,7 +1602,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv1 = Gtk.Entry()
                 pv2 = Gtk.Entry()
 
-                val = getYamlIndex(conf, 'op_trajectory_generator')
+                val = getYamlIndex(launch_, 'op_trajectory_generator')
 
                 pv1.set_text(str(val[0]['samplingTipMargin'])) # samplingTipMargin
                 pv2.set_text(str(val[1]['samplingOutMargin'])) # samplingOutMargin
@@ -1629,7 +1629,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv5 = Gtk.Entry()
                 pv6 = Gtk.Entry()
 
-                val = getYamlIndex(conf, 'op_motion_predictor')
+                val = getYamlIndex(launch_, 'op_motion_predictor')
 
                 #default values
                 pv1.set_text(str(val[0]['enableCurbObstacles'])) # enableCurbObstacles
@@ -1656,7 +1656,7 @@ class MyWindow(Gtk.ApplicationWindow):
             elif idx2 == 3: # op trajectory evaluator
                 param1 = Gtk.Label('enablePrediction')
                 pv1 = Gtk.Entry()
-                val = getYamlIndex(conf, 'op_trajectory_evaluator')
+                val = getYamlIndex(launch_, 'op_trajectory_evaluator')
                 pv1.set_text(str(val[0]['enablePrediction'])) # enablePrediction
                 in_grid.attach(param1, 0, 0, 1, 1)
                 in_grid.attach_next_to(pv1, param1, Gtk.PositionType.RIGHT, 1, 1)
@@ -1673,7 +1673,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv2 = Gtk.Entry()
                 pv3 = Gtk.Entry()
 
-                val = getYamlIndex(conf, 'vel_pose_connect')
+                val = getYamlIndex(launch_, 'vel_pose_connect')
 
                 pv1.set_text(str(val[0]['topic_pose_stamped'])) # topic_pose_stamped
                 pv2.set_text(str(val[1]['topic_twist_stamped'])) # topic_twist_stamped
@@ -1709,7 +1709,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv8 = Gtk.Entry()
                 pv9 = Gtk.Entry()
 
-                val = getYamlIndex(conf, 'baselink_to_localizer')
+                val = getYamlIndex(launch_, 'baselink_to_localizer')
 
                 #default values
                 pv1.set_text(str(val[0]['x'])) # x
@@ -1771,8 +1771,8 @@ class MyWindow(Gtk.ApplicationWindow):
         in_grid.set_row_homogeneous(True)
         exec_button = Gtk.Button.new_with_label("Execute")
         
-        conf = default_yaml.get('launch_param', [])
-        conf2 = default_yaml.get('config', [])
+        launch_ = default_yaml.get('launch_param', [])
+        config_ = default_yaml.get('config', [])
 
         grid.attach_next_to(
             exec_button, set_param_box, Gtk.PositionType.BOTTOM, 1, 1
@@ -1783,7 +1783,7 @@ class MyWindow(Gtk.ApplicationWindow):
             if idx2 == 0: # point cloud
                 param1 = Gtk.Label('PCD MAP path')
                 pv1 = Gtk.Entry()
-                val = getYamlIndex(conf, 'point_cloud_loader')
+                val = getYamlIndex(launch_, 'point_cloud_loader')
                 #default values
                 pv1.set_text(str(val[0]['path']))
                 in_grid.attach(param1, 0, 0, 1, 1)
@@ -1792,7 +1792,7 @@ class MyWindow(Gtk.ApplicationWindow):
             elif idx2 == 1: # vector map
                 param1 = Gtk.Label('Vector MAP path ( path1 path2 path3 ... )')
                 pv1 = Gtk.Entry()
-                val = getYamlIndex(conf, 'vector_map_loader')
+                val = getYamlIndex(launch_, 'vector_map_loader')
                 #default values
                 pv1.set_text(str(val[0]['path']))
                 in_grid.attach(param1, 0, 0, 1, 1)
@@ -1801,7 +1801,7 @@ class MyWindow(Gtk.ApplicationWindow):
             elif idx2 == 2: # point vector tf
                 param1 = Gtk.Label('tf launch path')
                 pv1 = Gtk.Entry()
-                val = getYamlIndex(conf, 'point_vector_tf')
+                val = getYamlIndex(launch_, 'point_vector_tf')
                 #default values
                 pv1.set_text(str(val[0]['path']))
                 in_grid.attach(param1, 0, 0, 1, 1)
@@ -1831,7 +1831,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv9 = Gtk.Entry()
                 pv10 = Gtk.Entry()
 
-                val = getYamlIndex(conf2, 'conf_ray_ground_filter')
+                val = getYamlIndex(config_, 'conf_ray_ground_filter')
 
                 #default values
                 pv1.set_text('/points_raw')
@@ -1876,7 +1876,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv2 = Gtk.Entry()
                 pv3 = Gtk.Entry()
 
-                val = getYamlIndex(conf, 'cloud_transformer')
+                val = getYamlIndex(launch_, 'cloud_transformer')
 
                 pv1.set_text(str(val[0]['input_point_topic'])) 
                 pv2.set_text(str(val[1]['target_frame'])) 
@@ -1906,8 +1906,8 @@ class MyWindow(Gtk.ApplicationWindow):
                 pv3 = Gtk.Entry()
                 pv4 = Gtk.Entry()
 
-                lval = getYamlIndex(conf, 'voxel_grid_filter')
-                cval = getYamlIndex(conf2, 'conf_voxel_grid_filter')
+                lval = getYamlIndex(launch_, 'voxel_grid_filter')
+                cval = getYamlIndex(config_, 'conf_voxel_grid_filter')
 
                 pv1.set_text(str(lval[0]['node_name'])) # node_name
                 pv2.set_text(str(lval[1]['points_topic'])) # points_topic
@@ -1946,64 +1946,64 @@ class MyWindow(Gtk.ApplicationWindow):
                 node_sequence_list.append('/obb_generator /qt_detect_node')
             elif idx2 == 1: # camera detector
                 run_cmd = 'None'
-                #run_cmd = ('roslaunch vision_darknet_detect vision_yolo3_detect.launch'+
-                #            'score_threshold:=' + plist[].get_text()
-                #            + 'nms_threshold:' + plist[].get_text()
-                #            + 'image_src:' + plist[].get_text()
-                #            + 'network_definition_file:=' + plist[].get_text() 
-                #            + 'pretrained_model_file:=' + plist[].get_text()
-                #            + 'names_file:=' + plist[].get_text()
-                #            + 'gpu_device_id:' + plist[].get_text()
-                #            + 'camera_id:=' + plist[].get_text())
+                #run_cmd = ('roslaunch vision_darknet_detect vision_yolo3_detect.launch'
+                #            + ' score_threshold:='          + plist[].get_text()
+                #            + ' nms_threshold:'             + plist[].get_text()
+                #            + ' image_src:'                 + plist[].get_text()
+                #            + ' network_definition_file:='  + plist[].get_text() 
+                #            + ' pretrained_model_file:='    + plist[].get_text()
+                #            + ' names_file:='               + plist[].get_text()
+                #            + ' gpu_device_id:'             + plist[].get_text()
+                #            + ' camera_id:='                + plist[].get_text())
                 node_sequence_list.append('/vision_darknet_detect /yolo3_rects')
             elif idx2 == 2: # lidar kf contour track
                 run_cmd = ('roslaunch lidar_kf_contour_track lidar_kf_contour_track.launch'
-                          + ' tracking_type:=' + plist[0].get_text() 
-                          + ' min_object_size:=' + plist[1].get_text() 
-                          + ' max_object_size:=' + plist[2].get_text() 
+                          + ' tracking_type:='              + plist[0].get_text() 
+                          + ' min_object_size:='            + plist[1].get_text() 
+                          + ' max_object_size:='            + plist[2].get_text() 
                           + ' vector_map_filter_distance:=' + plist[3].get_text() 
-                          + ' enableLogging:=' + plist[4].get_text() 
-                          + ' polygon_quarters:=' + plist[5].get_text() 
-                          + ' polygon_resolution:=' + plist[6].get_text() 
-                          + ' max_association_distance:=' + plist[7].get_text() 
-                          + ' max_association_size_diff:=' + plist[8].get_text() 
-                          + ' max_remeber_time:=' + plist[9].get_text() 
-                          + ' trust_counter:=' + plist[10].get_text() 
-                          + ' enableSimulationMode:=' + plist[11].get_text() 
-                          + ' enableStepByStepMode:=' + plist[12].get_text())
+                          + ' enableLogging:='              + plist[4].get_text() 
+                          + ' polygon_quarters:='           + plist[5].get_text() 
+                          + ' polygon_resolution:='         + plist[6].get_text() 
+                          + ' max_association_distance:='   + plist[7].get_text() 
+                          + ' max_association_size_diff:='  + plist[8].get_text() 
+                          + ' max_remeber_time:='           + plist[9].get_text() 
+                          + ' trust_counter:='              + plist[10].get_text() 
+                          + ' enableSimulationMode:='       + plist[11].get_text() 
+                          + ' enableStepByStepMode:='       + plist[12].get_text())
                 node_sequence_list.append('/lidar_kf_contour_track')
             elif idx2 == 3: # lidar camera fusion
                 run_cmd = 'None'
                 node_sequence_list.append('/detection/fusion_tools/range_fusion_visualization_01 /range_vision_fusion_01')
             elif idx2 == 4: # lidar_euclidean_cluster_detect
                 run_cmd = ('roslaunch lidar_euclidean_cluster_detect lidar_euclidean_cluster_detect.launch'
-                            + ' use_gpu:=' + plist[0].get_text()
-                            + ' output_frame:=' + plist[1].get_text()
-                            + ' pose_estimation:=' + plist[2].get_text()
-                            + ' downsample_cloud:=' + plist[3].get_text()
-                            + ' points_node:=' + plist[4].get_text()
-                            + ' leaf_size:=' + plist[5].get_text()
-                            + ' cluster_size_min:=' + plist[6].get_text()
-                            + ' cluster_size_max:=' + plist[7].get_text()
-                            + ' clustering_distance:=' + plist[8].get_text()
-                            + ' clip_min_height:=' + plist[9].get_text()
-                            + ' clip_max_height:=' + plist[10].get_text()
-                            + ' use_vector_map:=' + plist[11].get_text()
-                            + ' vectormap_frame:=' + plist[12].get_text()
-                            + ' wayarea_gridmap_topic:=' + plist[13].get_text()
-                            + ' wayarea_gridmap_layer:=' + plist[14].get_text()
-                            + ' wayarea_no_road_value:=' + plist[15].get_text()
-                            + ' remove_points_upto:=' + plist[16].get_text()
-                            + ' keep_lanes:=' + plist[17].get_text()
-                            + ' keep_lane_left_distance:=' + plist[18].get_text()
+                            + ' use_gpu:='                  + plist[0].get_text()
+                            + ' output_frame:='             + plist[1].get_text()
+                            + ' pose_estimation:='          + plist[2].get_text()
+                            + ' downsample_cloud:='         + plist[3].get_text()
+                            + ' points_node:='              + plist[4].get_text()
+                            + ' leaf_size:='                + plist[5].get_text()
+                            + ' cluster_size_min:='         + plist[6].get_text()
+                            + ' cluster_size_max:='         + plist[7].get_text()
+                            + ' clustering_distance:='      + plist[8].get_text()
+                            + ' clip_min_height:='          + plist[9].get_text()
+                            + ' clip_max_height:='          + plist[10].get_text()
+                            + ' use_vector_map:='           + plist[11].get_text()
+                            + ' vectormap_frame:='          + plist[12].get_text()
+                            + ' wayarea_gridmap_topic:='    + plist[13].get_text()
+                            + ' wayarea_gridmap_layer:='    + plist[14].get_text()
+                            + ' wayarea_no_road_value:='    + plist[15].get_text()
+                            + ' remove_points_upto:='       + plist[16].get_text()
+                            + ' keep_lanes:='               + plist[17].get_text()
+                            + ' keep_lane_left_distance:='  + plist[18].get_text()
                             + ' keep_lane_right_distance:=' + plist[19].get_text()
-                            + ' cluster_merge_threshold:=' + plist[20].get_text()
-                            + ' use_multiple_thres:=' + plist[21].get_text()
-                            + ' clustering_ranges:=' + plist[22].get_text()
-                            + ' clustering_distances:=' + plist[23].get_text()
-                            + ' remove_ground:=' + plist[24].get_text()
-                            + ' use_diffnormals:=' + plist[25].get_text()
-                            + ' publish_filtered:=' + plist[26].get_text())
+                            + ' cluster_merge_threshold:='  + plist[20].get_text()
+                            + ' use_multiple_thres:='       + plist[21].get_text()
+                            + ' clustering_ranges:='        + plist[22].get_text()
+                            + ' clustering_distances:='     + plist[23].get_text()
+                            + ' remove_ground:='            + plist[24].get_text()
+                            + ' use_diffnormals:='          + plist[25].get_text()
+                            + ' publish_filtered:='         + plist[26].get_text())
                 node_sequence_list.append('/detection/lidar_detector/cluster_detect_visualization_01 /lidar_euclidean_cluster_detect')
         elif idx1 == 1: # Follower
             if idx2 == 0: # twist filter /config/twist_filter
@@ -2030,31 +2030,31 @@ class MyWindow(Gtk.ApplicationWindow):
                 node_sequence_list.append('/pure_pursuit')
             elif idx2 == 2: # mpc
                 run_cmd = ('roslaunch waypoint_follower mpc_follower.launch'
-                          + ' show_debug_info:=' + plist[0].get_text() 
-                          + ' publish_debug_values:=' + plist[1].get_text() 
-                          + ' vehicle_model_type:=' + plist[2].get_text() 
-                          + ' qp_solver_type:=' + plist[3].get_text() 
-                          + ' admisible_position_error:=' + plist[4].get_text() 
-                          + ' admisible_yaw_error_deg:=' + plist[5].get_text() 
-                          + ' mpc_prediction_horizon:=' + plist[6].get_text() 
-                          + ' mpc_prediction_sampling_time:=' + plist[7].get_text() 
-                          + ' mpc_weight_lat_error:=' + plist[8].get_text() 
-                          + ' mpc_weight_terminal_lat_error:=' + plist[9].get_text() 
-                          + ' mpc_weight_heading_error:=' + plist[10].get_text() 
-                          + ' mpc_weight_heading_error_squared_vel_coeff:=' + plist[11].get_text() 
-                          + ' mpc_weight_terminal_heading_error:=' + plist[12].get_text() 
-                          + ' mpc_weight_lat_jerk:=' + plist[13].get_text() 
-                          + ' mpc_weight_steering_input:=' + plist[14].get_text() 
-                          + ' mpc_weight_steering_input_squared_vel_coeff:=' + plist[15].get_text() 
-                          + ' mpc_zero_ff_steer_deg:=' + plist[16].get_text() 
-                          + ' enable_path_smoothing:=' + plist[17].get_text() 
-                          + ' path_smoothing_times:=' + plist[18].get_text() 
-                          + ' path_filter_moving_ave_num:=' + plist[19].get_text() 
-                          + ' curvature_smoothing_num:=' + plist[20].get_text() 
-                          + ' steering_lpf_cutoff_hz:=' + plist[21].get_text() 
-                          + ' vehicle_model_steer_tau:=' + plist[22].get_text() 
-                          + ' vehicle_model_wheelbase:=' + plist[23].get_text() 
-                          + ' steer_lim_deg:=' + plist[24].get_text())
+                          + ' show_debug_info:='                                + plist[0].get_text() 
+                          + ' publish_debug_values:='                           + plist[1].get_text() 
+                          + ' vehicle_model_type:='                             + plist[2].get_text() 
+                          + ' qp_solver_type:='                                 + plist[3].get_text() 
+                          + ' admisible_position_error:='                       + plist[4].get_text() 
+                          + ' admisible_yaw_error_deg:='                        + plist[5].get_text() 
+                          + ' mpc_prediction_horizon:='                         + plist[6].get_text() 
+                          + ' mpc_prediction_sampling_time:='                   + plist[7].get_text() 
+                          + ' mpc_weight_lat_error:='                           + plist[8].get_text() 
+                          + ' mpc_weight_terminal_lat_error:='                  + plist[9].get_text() 
+                          + ' mpc_weight_heading_error:='                       + plist[10].get_text() 
+                          + ' mpc_weight_heading_error_squared_vel_coeff:='     + plist[11].get_text() 
+                          + ' mpc_weight_terminal_heading_error:='              + plist[12].get_text() 
+                          + ' mpc_weight_lat_jerk:='                            + plist[13].get_text() 
+                          + ' mpc_weight_steering_input:='                      + plist[14].get_text() 
+                          + ' mpc_weight_steering_input_squared_vel_coeff:='    + plist[15].get_text() 
+                          + ' mpc_zero_ff_steer_deg:='                          + plist[16].get_text() 
+                          + ' enable_path_smoothing:='                          + plist[17].get_text() 
+                          + ' path_smoothing_times:='                           + plist[18].get_text() 
+                          + ' path_filter_moving_ave_num:='                     + plist[19].get_text() 
+                          + ' curvature_smoothing_num:='                        + plist[20].get_text() 
+                          + ' steering_lpf_cutoff_hz:='                         + plist[21].get_text() 
+                          + ' vehicle_model_steer_tau:='                        + plist[22].get_text() 
+                          + ' vehicle_model_wheelbase:='                        + plist[23].get_text() 
+                          + ' steer_lim_deg:='                                  + plist[24].get_text())
                 node_sequence_list.append('/mpc_follower /mpc_waypoints_converter')
             elif idx2 == 3: # hybride stenly
                 run_cmd = 'None'
@@ -2071,13 +2071,13 @@ class MyWindow(Gtk.ApplicationWindow):
                 data.max_iterations   = int(plist[6].get_text())
                 self.config_pub.onConfigNdt(data)
                 run_cmd = ('roslaunch lidar_localizer ndt_matching.launch'
-                + ' method_type:=' + plist[7].get_text() 
-                + ' use_odom:=' + plist[8].get_text() 
-                + ' use_imu:=' + plist[9].get_text() 
-                + ' imu_upside_down:=' + plist[10].get_text() 
-                + ' imu_topic:=' + plist[11].get_text() 
-                + ' get_height:=' + plist[12].get_text() 
-                + ' output_log_data:=' + plist[13].get_text())
+                + ' method_type:='      + plist[7].get_text() 
+                + ' use_odom:='         + plist[8].get_text() 
+                + ' use_imu:='          + plist[9].get_text() 
+                + ' imu_upside_down:='  + plist[10].get_text() 
+                + ' imu_topic:='        + plist[11].get_text() 
+                + ' get_height:='       + plist[12].get_text() 
+                + ' output_log_data:='  + plist[13].get_text())
                 node_sequence_list.append('/ndt_matching')
             elif idx2 == 1: # ekf localizer
                 run_cmd = 'None'
@@ -2098,13 +2098,13 @@ class MyWindow(Gtk.ApplicationWindow):
                 data.stopped_vel            = float(plist[10].get_text())
                 self.config_pub.onConfigDecisionMaker(data)
                 run_cmd = ('roslaunch decision_maker decision_maker.launch'
-                          + ' disuse_vector_map:=' + plist[4].get_text() 
-                          + ' points_topic:=' + plist[11].get_text() 
-                          + ' baselink_tf:=' + plist[12].get_text() 
-                          + ' use_fms:=' + plist[3].get_text() 
-                          + ' auto_mission_reload:=' + plist[0].get_text() 
-                          + ' auto_engage:=' + plist[1].get_text() 
-                          + ' auto_mission_change:=' + plist[2].get_text())
+                          + ' disuse_vector_map:='      + plist[4].get_text() 
+                          + ' points_topic:='           + plist[11].get_text() 
+                          + ' baselink_tf:='            + plist[12].get_text() 
+                          + ' use_fms:='                + plist[3].get_text() 
+                          + ' auto_mission_reload:='    + plist[0].get_text() 
+                          + ' auto_engage:='            + plist[1].get_text() 
+                          + ' auto_mission_change:='    + plist[2].get_text())
                 node_sequence_list.append('/decision_maker')
         elif idx1 == 4: # LaneChange Manager
             if idx2 == 0: # lanechange manager
@@ -2112,25 +2112,26 @@ class MyWindow(Gtk.ApplicationWindow):
                 node_sequence_list.append('/lanechange_manager')
         elif idx1 == 5: # Local Planner
             if idx2 == 0: # op commom params
-                run_cmd = ('roslaunch op_local_planner op_common_params.launch horizonDistance:=' + plist[0].get_text() 
-                          + ' maxLocalPlanDistance:=' + plist[1].get_text() 
-                          + ' pathDensity:='+ plist[2].get_text() 
-                          + ' rollOutDensity:=' + plist[3].get_text() 
-                          + ' rollOutsNumber:=' + plist[4].get_text() 
-                          + ' maxVelocity:=' + plist[5].get_text() 
-                          + ' maxAcceleration:=' + plist[6].get_text() 
-                          + ' maxDeceleration:=' + plist[7].get_text() 
-                          + ' enableFollowing:=' + plist[8].get_text() 
-                          + ' enableSwerving:=' + plist[9].get_text() 
-                          + ' minFollowingDistance:=' + plist[10].get_text() 
-                          + ' minDistanceToAvoid:=' + plist[11].get_text() 
-                          + ' maxDistanceToAvoid:=' + plist[12].get_text() 
-                          + ' enableStopSignBehavior:=' + plist[13].get_text() 
+                run_cmd = ('roslaunch op_local_planner op_common_params.launch'
+                          +' horizonDistance:='             + plist[0].get_text() 
+                          + ' maxLocalPlanDistance:='       + plist[1].get_text() 
+                          + ' pathDensity:='                + plist[2].get_text() 
+                          + ' rollOutDensity:='             + plist[3].get_text() 
+                          + ' rollOutsNumber:='             + plist[4].get_text() 
+                          + ' maxVelocity:='                + plist[5].get_text() 
+                          + ' maxAcceleration:='            + plist[6].get_text() 
+                          + ' maxDeceleration:='            + plist[7].get_text() 
+                          + ' enableFollowing:='            + plist[8].get_text() 
+                          + ' enableSwerving:='             + plist[9].get_text() 
+                          + ' minFollowingDistance:='       + plist[10].get_text() 
+                          + ' minDistanceToAvoid:='         + plist[11].get_text() 
+                          + ' maxDistanceToAvoid:='         + plist[12].get_text() 
+                          + ' enableStopSignBehavior:='     + plist[13].get_text() 
                           + ' enableTrafficLightBehavior:=' + plist[14].get_text() 
-                          + ' enableLaneChange:=' + plist[15].get_text() 
-                          + ' horizontalSafetyDistance:=' + plist[16].get_text() 
-                          + ' verticalSafetyDistance:=' + plist[17].get_text() 
-                          + ' velocitySource:=' + plist[18].get_text())
+                          + ' enableLaneChange:='           + plist[15].get_text() 
+                          + ' horizontalSafetyDistance:='   + plist[16].get_text() 
+                          + ' verticalSafetyDistance:='     + plist[17].get_text() 
+                          + ' velocitySource:='             + plist[18].get_text())
                 node_sequence_list.append('/op_common_params')
             elif idx2 == 1: # op trajectory generator
                 run_cmd = ('roslaunch op_local_planner op_trajectory_generator.launch'
@@ -2138,11 +2139,12 @@ class MyWindow(Gtk.ApplicationWindow):
                           + ' samplingOutMargin:=' + plist[1].get_text())
                 node_sequence_list.append('/op_trajectory_generator')
             elif idx2 == 2: # op motion predictor
-                run_cmd = ('roslaunch op_local_planner op_motion_predictor.launch enableCurbObstacles:=' + plist[0].get_text() 
-                          + ' enableGenrateBranches:=' + plist[1].get_text() 
-                          + ' max_distance_to_lane:=' + plist[2].get_text() 
-                          + ' prediction_distance:=' + plist[3].get_text() 
-                          + ' enableStepByStepSignal:=' + plist[4].get_text() 
+                run_cmd = ('roslaunch op_local_planner op_motion_predictor.launch'
+                          + ' enableCurbObstacles:='            + plist[0].get_text() 
+                          + ' enableGenrateBranches:='          + plist[1].get_text() 
+                          + ' max_distance_to_lane:='           + plist[2].get_text() 
+                          + ' prediction_distance:='            + plist[3].get_text() 
+                          + ' enableStepByStepSignal:='         + plist[4].get_text() 
                           + ' enableParticleFilterPrediction:=' + plist[5].get_text())
                 node_sequence_list.append('/op_motion_predictor')
             elif idx2 == 3: # op trajectory evaluator
@@ -2155,21 +2157,21 @@ class MyWindow(Gtk.ApplicationWindow):
         elif idx1 == 6: # Vehicle Setting
             if idx2 == 0: # vel pose connect
                 run_cmd = ('roslaunch autoware_connector vel_pose_connect.launch'
-                        + ' topic_pose_stamped:=' + plist[0].get_text() 
-                        + ' topic_twist_stamped:=' + plist[1].get_text() 
-                        + ' sim_mode:=' + plist[2].get_text())
+                        + ' topic_pose_stamped:='   + plist[0].get_text() 
+                        + ' topic_twist_stamped:='  + plist[1].get_text() 
+                        + ' sim_mode:='             + plist[2].get_text())
                 node_sequence_list.append('/pose_relay /vel_relay')
             elif idx2 == 1: # baselink to localizer
                 run_cmd = ('roslaunch runtime_manager setup_tf.launch'
-                          + ' x:=' + plist[0].get_text()
-                          + ' y:=' + plist[1].get_text()
-                          + ' z:=' + plist[2].get_text()
-                          + ' yaw:=' + plist[3].get_text()
-                          + ' pitch:=' + plist[4].get_text()
-                          + ' roll:=' + plist[5].get_text()
-                          + ' frame_id:=' + plist[6].get_text()
+                          + ' x:='              + plist[0].get_text()
+                          + ' y:='              + plist[1].get_text()
+                          + ' z:='              + plist[2].get_text()
+                          + ' yaw:='            + plist[3].get_text()
+                          + ' pitch:='          + plist[4].get_text()
+                          + ' roll:='           + plist[5].get_text()
+                          + ' frame_id:='       + plist[6].get_text()
                           + ' child_frame_id:=' + plist[7].get_text()
-                          + ' period_in_ms:=' + plist[8].get_text())
+                          + ' period_in_ms:='   + plist[8].get_text())
                 node_sequence_list.append('/base_link_to_localizer')
         elif idx1 == 7: # quick start
             if idx2 == 0: # detection quick start
