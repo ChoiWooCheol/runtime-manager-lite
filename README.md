@@ -13,7 +13,7 @@
 
 # Run
 ```sh
-$ rosrun autoware_lite runtime_manager_lite.py
+$ roslaunch autoware_lite runtime_manager_lite.launch
 ``` 
 
 # Result
