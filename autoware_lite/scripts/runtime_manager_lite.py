@@ -108,6 +108,13 @@ detection_quickstart_yaml = load_yaml('detection_quickstart.yaml')
 sensing_quickstart_yaml = load_yaml('sensing_quickstart.yaml')
 map_quickstart_yaml = load_yaml('map_quickstart.yaml')
 
+def excuteRosCore():
+        subprocess.check_call(['roscore'], shell=True)
+
+run_roscore = threading.Thread(target=excuteRosCore)
+run_roscore.daemon = True
+run_roscore.start()
+
 class AutowareConfigPublisher:
     def __init__(self):
         self.pub_twist_filter       = rospy.Publisher('/config/twist_filter', ConfigTwistFilter, latch=True, queue_size=10)
@@ -2179,9 +2186,10 @@ class MyApplication(Gtk.Application):
 
     def __init__(self):
         Gtk.Application.__init__(self)
+        self.win = MyWindow(self)
         
     def do_activate(self):
-        self.win = MyWindow(self)
+        # self.win = MyWindow(self)
         self.win.show_all()
 
     def do_startup(self):

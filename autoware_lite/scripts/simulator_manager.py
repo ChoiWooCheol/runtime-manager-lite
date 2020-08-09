@@ -75,7 +75,7 @@ check_alive = [["", "", "", "", ""], # Detection
                [""], # LaneChange manager
                ["", "", "", ""], # Local Planner
                [""], # Vehicle Setting
-               ["", ""], # Map
+               ["", "", ""], # Map
                ["", "", "", ""], # Sensing
                [""]] # Point Downsampler
 
@@ -86,7 +86,7 @@ alive_names = [["LiDAR detector", "camera detector", "lidar_kf_contour_track", "
                ["lanechange manager"], # LaneChange manager
                ["op_motion_predictor", "op_trajectory_evaluator", "op_trajectory_generator", "op_behavior_selector"], # Local Planner
                ["vel_pose_connect"], # Vehicle Setting
-               ["point cloud", "vector map"], # Map
+               ["point cloud", "vector map", "point_vector tf"], # Map
                ["ray_ground_filter", "cloud_transformer", "sensor3", "sensor4"], # Sensing
                ["voxel_grid_filter"]] # Point Downsampler
 
@@ -109,7 +109,6 @@ def getYamlIndex(config, name):
         if name in list_:
             return list_[name]
 
-print("")
 default_yaml = load_yaml('default_param.yaml')
 planning_quickstart_yaml = load_yaml('planning_quickstart.yaml')
 detection_quickstart_yaml = load_yaml('detection_quickstart.yaml')
@@ -130,7 +129,7 @@ class AutowareConfigPublisher:
     def setDefaultConfigParam(self):
         
         config_ = default_yaml.get('config', [])
-        setup_ = default_yaml.get('setup_', [])
+        setup_ = default_yaml.get('setup', [])
         for inst in setup_:
             for cmd in inst['tf_setup']:
                 print(cmd['cmd'])
@@ -249,7 +248,7 @@ class AutowareAliveNodesCheck:
                           [-1], # LaneChange manager
                           [-1,-1,-1,-1], # Local Planner
                           [-1], # Vehicle Setting
-                          [-1,-1], # Map
+                          [-1,-1,-1], # Map
                           [-1,-1,-1,-1], # Sensing
                           [-1]] # Point Downsampler
 
@@ -261,6 +260,22 @@ class AutowareAliveNodesCheck:
         self.reset_time = 3
 
     def changeAliveState(self):
+        self.checkWorldToMap()
+        if "/vector_map_loader" not in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[7][1] = -1
+            self.mutex.release()
+        
+        if "/points_map_loader" not in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[7][0] = -1
+            self.mutex.release()
+
+        if estop_state == True:
+            for i in range(len(self.deadCount)):
+                for j in range(len(self.deadCount[i])):
+                    self.deadCount[i][j] = -1
+
         for i in range(len(self.deadCount)):
             for j in range(len(self.deadCount[i])):
                 if self.deadCount[i][j] < 0:
@@ -351,6 +366,11 @@ class AutowareAliveNodesCheck:
             self.mutex.acquire()
             self.deadCount[7][1]   = 999999
             self.mutex.release()
+    def checkWorldToMap(self):
+        if "/world_to_map" in node_sequence_list:
+            self.mutex.acquire()
+            self.deadCount[7][2]   = self.reset_time
+            self.mutex.release()
     #def checkSensor(self, data):
     #    if "sensor node name" in node_sequence_list:
     #        self.mutex.acquire()
@@ -371,7 +391,6 @@ class AutowareAliveNodesCheck:
             self.mutex.acquire()
             self.deadCount[9][0]   = self.reset_time
             self.mutex.release()
-    
 
     def upDateAliveState(self):
         while 1:
@@ -384,7 +403,7 @@ class AutowareAliveNodesCheck:
 
 class MyWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
-        rospy.init_node('runime_manager_lite', anonymous=True)
+        rospy.init_node('runime_manager_lite', anonymous=False)
 
         Gtk.Window.__init__(self, title="Autoware Lite", application=app)
         self.set_default_size(800, 600)
@@ -686,10 +705,11 @@ class MyWindow(Gtk.ApplicationWindow):
                             + '     vel_pose_connect --------> '      + check_alive[6][0] + '\n\n')
             map_txt = ('Map : \n' 
                             + '     point cloud -------------> '      + check_alive[7][0] + '\n'
-                            + '     vector map -------------> '       + check_alive[7][1] + '\n\n')
+                            + '     vector map -------------> '       + check_alive[7][1] + '\n'
+                            + '     point_vector tf -------> '       + check_alive[7][2] + '\n\n')
             sensing_txt = ('Sensing : \n'
                             + '     ray_ground_filter -------> ' + check_alive[8][0] + '\n'
-                            + '     cloud_transformer -------> ' + check_alive[8][1] + '\n'
+                            + '     cloud_transformer -----> ' + check_alive[8][1] + '\n'
                             + '     sensor3 -------> ' + check_alive[8][2] + '\n'
                             + '     sensor4 -------> ' + check_alive[8][3] + '\n\n')
             downsampler_txt = ('Point Downsampler : \n'
@@ -880,7 +900,7 @@ class MyWindow(Gtk.ApplicationWindow):
             # elif idx2 == 1: # camera detector
             elif idx2 == 2: # lidar kf contour track
                 # lauch param
-                param1 = Gtk.Label('tracking_type (Associate Only: 0, Simple Tracker : 1, Contour Tracker : 2)')
+                param1 = Gtk.Label('tracking_type (Associate Only : 0, Simple Tracker : 1, Contour Tracker : 2)')
                 param2 = Gtk.Label('min_object_size (0.0 ~ 2.0)')
                 param3 = Gtk.Label('max_object_size (0.0 ~ 100.0)')
                 param4 = Gtk.Label('vector_map_filter_distance (0.0 ~ 20.0)')
