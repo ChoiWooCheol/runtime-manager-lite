@@ -1,0 +1,3 @@
+<launch>
+    <node name="adas_manager" pkg="autoware_lite" type="run_adas_manager" output="screen"/>
+</launch>

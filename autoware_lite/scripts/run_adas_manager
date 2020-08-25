@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+CURDIR=$(readlink -f  $(dirname $0))
+CLEANUP_SCRIPT=$CURDIR/cleanup
+PROC_MANAGER=$(gnome-terminal -e rosrun autoware_lite adas_manager.py)
+MY_PATH=$(readlink -f  $(dirname $0))
+
+exec $(gnome-terminal -e "rosrun autoware_lite adas_manager.py")
+# exec $(gnome-terminal -e "rosrun autoware_lite adas_manager.py")

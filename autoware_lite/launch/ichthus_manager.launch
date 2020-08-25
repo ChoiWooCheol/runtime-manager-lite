@@ -1,0 +1,3 @@
+<launch>
+    <node name="ichthus_manager" pkg="autoware_lite" type="run_ichthus_manager" output="screen"/>
+</launch>
