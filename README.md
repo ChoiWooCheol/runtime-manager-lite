@@ -16,7 +16,7 @@
 $ roslaunch autoware_lite adas_manager.launch
 ```
 ```sh
-// this launch file with ichthus that is ssu Autonomos vehicle 
+# this launch file with ichthus that is ssu Autonomos vehicle 
 $ roslaunch autoware_lite ichthus_manager.launch
 ``` 
 
